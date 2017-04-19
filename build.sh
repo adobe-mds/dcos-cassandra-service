@@ -11,8 +11,7 @@ cd $REPO_ROOT_DIR
 
 # GitHub notifier config
 _notify_github() {
-   # $REPO_ROOT_DIR/dcos-commons-tools/github_update.py $1 build $2
-   echo $2
+    $REPO_ROOT_DIR/dcos-commons-tools/github_update.py $1 build $2
 }
 
 # Build steps for Cassandra
@@ -40,7 +39,7 @@ fi
 cd cli/ && ./build-cli.sh
 if [ $? -ne 0 ]; then
   _notify_github failure "CLI build failed"
- # exit 1
+  exit 1
 fi
 cd $REPO_ROOT_DIR
 
