@@ -55,5 +55,5 @@ def test_marathon_rack_not_found():
     plan = dcos.http.get(cassandra_api_url('plan'), is_success=allow_incomplete_plan).json()
     # check that first node is still (unsuccessfully) looking for a match:
     assert plan['status'] == infinity_commons.PlanState.IN_PROGRESS.value
-    assert infinity_commons.filter_phase(plan, "Deploy")['steps'][0]['status'] == 'PENDING'
+    assert infinity_commons.filter_phase(plan, "Deploy")['steps'][1]['status'] == infinity_commons.PlanState.PENDING.value
     uninstall()
