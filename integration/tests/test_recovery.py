@@ -37,7 +37,7 @@ counter = 0
 def get_and_verify_plan(predicate=lambda r: True):
     global counter
     def fn():
-        return dcos.http.get(cassandra_api_url('plan'))
+        return dcos.http.get(cassandra_api_url('plan'), is_success=allow_incomplete_plan)
 
     def success_predicate(result):
         global counter
@@ -56,6 +56,10 @@ def get_and_verify_plan(predicate=lambda r: True):
         return predicate(body), message
 
     return spin(fn, success_predicate).json()
+
+
+def allow_incomplete_plan(status_code):
+    return 200 <= status_code < 300 or status_code == 503
 
 
 def get_node_host():
