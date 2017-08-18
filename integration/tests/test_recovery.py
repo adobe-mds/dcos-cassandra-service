@@ -2,6 +2,9 @@ import json
 import dcos
 import pytest
 import shakedown
+import time
+
+from . import infinity_commons
 
 from tests.command import (
     cassandra_api_url,
@@ -100,23 +103,18 @@ def run_cleanup():
 
 def run_planned_operation(operation, failure=lambda: None):
     plan = get_and_verify_plan()
-
     operation()
-    pred = lambda p: (
-        plan['phases'][1]['id'] != p['phases'][1]['id'] or
-        len(plan['phases']) < len(p['phases']) or
-        p['status'] == 'InProgress'
-    )
+    #Wait for service to be up again
+    time.sleep(50)
     next_plan = get_and_verify_plan(
         lambda p: (
             plan['phases'][1]['id'] != p['phases'][1]['id'] or
             len(plan['phases']) < len(p['phases']) or
-            p['status'] == 'InProgress'
+            p['status'] == infinity_commons.PlanState.IN_PROGRESS.value
         )
     )
-
     failure()
-    completed_plan = get_and_verify_plan(lambda p: p['status'] == 'Complete')
+    completed_plan = get_and_verify_plan(lambda p: p['status'] == infinity_commons.PlanState.COMPLETE.value)
 
 
 def run_repair():
