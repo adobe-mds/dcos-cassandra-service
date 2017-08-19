@@ -105,11 +105,11 @@ def run_cleanup():
     )
 
 
-def run_planned_operation(operation, failure=lambda: None):
+def run_planned_operation(operation, failure=lambda: None, delay=0):
     plan = get_and_verify_plan()
     operation()
     #Wait for service to be up again
-    time.sleep(50)
+    time.sleep(delay)
     next_plan = get_and_verify_plan(
         lambda p: (
             plan['phases'][1]['id'] != p['phases'][1]['id'] or
@@ -222,24 +222,27 @@ def test_partition():
 
 @pytest.mark.recovery
 def test_partition_master_both_ways():
-    shakedown.partition_master()
-    shakedown.reconnect_master()
+    master_leader_ip = shakedown.master_leader_ip()
+    shakedown.partition_master(master_leader_ip)
+    shakedown.reconnect_master(master_leader_ip)
 
     check_health()
 
 
 @pytest.mark.recovery
 def test_partition_master_incoming():
-    shakedown.partition_master(incoming=True, outgoing=False)
-    shakedown.reconnect_master()
+    master_leader_ip = shakedown.master_leader_ip()
+    shakedown.partition_master(master_leader_ip, incoming=True, outgoing=False)
+    shakedown.reconnect_master(master_leader_ip)
 
     check_health()
 
 
 @pytest.mark.recovery
 def test_partition_master_outgoing():
-    shakedown.partition_master(incoming=False, outgoing=True)
-    shakedown.reconnect_master()
+    master_leader_ip = shakedown.master_leader_ip()
+    shakedown.partition_master(master_leader_ip, incoming=False, outgoing=True)
+    shakedown.reconnect_master(master_leader_ip)
 
     check_health()
 
@@ -261,7 +264,8 @@ def test_config_update_then_kill_task_in_node():
     host = get_node_host()
     run_planned_operation(
         bump_cpu_count_config,
-        lambda: kill_task_with_pattern('CassandraDaemon', host)
+        lambda: kill_task_with_pattern('CassandraDaemon', host),
+        50
     )
 
     check_health()
@@ -272,7 +276,8 @@ def test_config_update_then_kill_all_task_in_node():
     hosts = shakedown.get_service_ips(SERVICE_NAME)
     run_planned_operation(
         bump_cpu_count_config,
-        lambda: [kill_task_with_pattern('CassandraDaemon', h) for h in hosts]
+        lambda: [kill_task_with_pattern('CassandraDaemon', h) for h in hosts],
+        50
     )
 
     check_health()
@@ -283,7 +288,8 @@ def test_config_update_then_scheduler_died():
     host = get_scheduler_host()
     run_planned_operation(
         bump_cpu_count_config,
-        lambda: kill_task_with_pattern('cassandra.scheduler.Main', host)
+        lambda: kill_task_with_pattern('cassandra.scheduler.Main', host),
+        50
     )
 
     check_health()
@@ -294,7 +300,8 @@ def test_config_update_then_executor_killed():
     host = get_node_host()
     run_planned_operation(
         bump_cpu_count_config,
-        lambda: kill_task_with_pattern('cassandra.executor.Main', host)
+        lambda: kill_task_with_pattern('cassandra.executor.Main', host),
+        50
     )
 
     check_health()
@@ -325,7 +332,7 @@ def test_config_update_then_master_killed():
 @pytest.mark.recovery
 def test_config_update_then_zk_killed():
     run_planned_operation(
-        bump_cpu_count_config, lambda: kill_task_with_pattern('zookeeper')
+        bump_cpu_count_config, lambda: kill_task_with_pattern('zookeeper'), 50
     )
 
     check_health()
@@ -339,7 +346,7 @@ def test_config_update_then_partition():
         shakedown.partition_agent(host)
         shakedown.reconnect_agent(host)
 
-    run_planned_operation(bump_cpu_count_config, partition)
+    run_planned_operation(bump_cpu_count_config, partition, 50)
 
     check_health()
 
@@ -354,7 +361,7 @@ def test_config_update_then_all_partition():
         for host in hosts:
             shakedown.reconnect_agent(host)
 
-    run_planned_operation(bump_cpu_count_config, partition)
+    run_planned_operation(bump_cpu_count_config, partition, 50)
 
     check_health()
 
