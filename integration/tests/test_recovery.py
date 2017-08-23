@@ -1,10 +1,7 @@
-import json
 import dcos
 import pytest
 import shakedown
 import time
-
-from . import infinity_commons
 
 from tests.command import (
     cassandra_api_url,
@@ -18,6 +15,7 @@ from tests.command import (
     unset_ssl_verification,
 )
 from tests.defaults import DEFAULT_NODE_COUNT, SERVICE_NAME
+from . import infinity_commons
 
 
 def bump_cpu_count_config():
@@ -59,7 +57,7 @@ def get_and_verify_plan(predicate=lambda r: True):
 
 
 def allow_incomplete_plan(status_code):
-    return 200 <= status_code < 300 or status_code == 503
+    return 200 <= status_code < 300 or status_code == 503 or status_code == 502 or status_code == 500 or status_code == 409
 
 
 def get_node_host():
@@ -105,11 +103,9 @@ def run_cleanup():
     )
 
 
-def run_planned_operation(operation, failure=lambda: None, delay=0):
+def run_planned_operation(operation, failure=lambda: None):
     plan = get_and_verify_plan()
     operation()
-    #Wait for service to be up again
-    time.sleep(delay)
     next_plan = get_and_verify_plan(
         lambda p: (
             plan['phases'][1]['id'] != p['phases'][1]['id'] or
@@ -195,18 +191,22 @@ def test_all_executors_killed():
 
 @pytest.mark.recovery
 def test_master_killed():
-    kill_task_with_pattern('mesos-master')
+    master_leader_ip = shakedown.master_leader_ip()
+    kill_task_with_pattern('mesos-master', master_leader_ip)
 
+    print(shakedown.get_all_master_ips())
     check_health()
-    _block_on_adminrouter()
+    _block_on_adminrouter(master_leader_ip)
 
 
 @pytest.mark.recovery
 def test_zk_killed():
-    kill_task_with_pattern('zookeeper')
+    master_leader_ip = shakedown.master_leader_ip()
+    kill_task_with_pattern('zookeeper', master_leader_ip)
 
+    print(shakedown.get_all_master_ips())
     check_health()
-    _block_on_adminrouter()
+    _block_on_adminrouter(master_leader_ip)
 
 
 @pytest.mark.recovery
@@ -264,8 +264,7 @@ def test_config_update_then_kill_task_in_node():
     host = get_node_host()
     run_planned_operation(
         bump_cpu_count_config,
-        lambda: kill_task_with_pattern('CassandraDaemon', host),
-        50
+        lambda: kill_task_with_pattern('CassandraDaemon', host)
     )
 
     check_health()
@@ -276,8 +275,7 @@ def test_config_update_then_kill_all_task_in_node():
     hosts = shakedown.get_service_ips(SERVICE_NAME)
     run_planned_operation(
         bump_cpu_count_config,
-        lambda: [kill_task_with_pattern('CassandraDaemon', h) for h in hosts],
-        50
+        lambda: [kill_task_with_pattern('CassandraDaemon', h) for h in hosts]
     )
 
     check_health()
@@ -288,8 +286,7 @@ def test_config_update_then_scheduler_died():
     host = get_scheduler_host()
     run_planned_operation(
         bump_cpu_count_config,
-        lambda: kill_task_with_pattern('cassandra.scheduler.Main', host),
-        50
+        lambda: kill_task_with_pattern('cassandra.scheduler.Main', host)
     )
 
     check_health()
@@ -300,8 +297,7 @@ def test_config_update_then_executor_killed():
     host = get_node_host()
     run_planned_operation(
         bump_cpu_count_config,
-        lambda: kill_task_with_pattern('cassandra.executor.Main', host),
-        50
+        lambda: kill_task_with_pattern('cassandra.executor.Main', host)
     )
 
     check_health()
@@ -332,7 +328,7 @@ def test_config_update_then_master_killed():
 @pytest.mark.recovery
 def test_config_update_then_zk_killed():
     run_planned_operation(
-        bump_cpu_count_config, lambda: kill_task_with_pattern('zookeeper'), 50
+        bump_cpu_count_config, lambda: kill_task_with_pattern('zookeeper')
     )
 
     check_health()
@@ -346,7 +342,7 @@ def test_config_update_then_partition():
         shakedown.partition_agent(host)
         shakedown.reconnect_agent(host)
 
-    run_planned_operation(bump_cpu_count_config, partition, 50)
+    run_planned_operation(bump_cpu_count_config, partition)
 
     check_health()
 
@@ -361,7 +357,7 @@ def test_config_update_then_all_partition():
         for host in hosts:
             shakedown.reconnect_agent(host)
 
-    run_planned_operation(bump_cpu_count_config, partition, 50)
+    run_planned_operation(bump_cpu_count_config, partition)
 
     check_health()
 
