@@ -12,7 +12,7 @@
 					"id": "http://cassandra/docs/mesosphere.com/service/name",
 					"type": "string",
 					"description": "The name of the Cassandra service instance.",
-					"default": "cassandra"
+					"default": "mds-cassandra"
 				},
 				"user": {
 					"id": "http://cassandra/docs/mesosphere.com/service/user",
