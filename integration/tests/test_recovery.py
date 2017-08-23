@@ -1,7 +1,6 @@
 import dcos
 import pytest
 import shakedown
-import time
 
 from tests.command import (
     cassandra_api_url,
