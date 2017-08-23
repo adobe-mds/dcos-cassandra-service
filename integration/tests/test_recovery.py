@@ -14,7 +14,7 @@ from tests.command import (
     uninstall,
     unset_ssl_verification,
 )
-from tests.defaults import DEFAULT_NODE_COUNT, SERVICE_NAME
+from tests.defaults import DEFAULT_NODE_COUNT, PACKAGE_NAME
 from . import infinity_commons
 
 
@@ -63,7 +63,7 @@ def allow_incomplete_plan(status_code):
 def get_node_host():
     def fn():
         try:
-            return shakedown.get_service_ips(SERVICE_NAME)
+            return shakedown.get_service_ips(PACKAGE_NAME)
         except IndexError:
             return set()
 
@@ -126,7 +126,7 @@ def run_repair():
     )
 
 
-def _block_on_adminrouter():
+def _block_on_adminrouter(master_ip):
     def get_master_ip():
         return shakedown.master_ip()
 
@@ -161,7 +161,7 @@ def test_kill_task_in_node():
 
 @pytest.mark.recovery
 def test_kill_all_task_in_node():
-    for host in shakedown.get_service_ips(SERVICE_NAME):
+    for host in shakedown.get_service_ips(PACKAGE_NAME):
         kill_task_with_pattern('CassandraDaemon', host)
 
     check_health()
@@ -183,7 +183,7 @@ def test_executor_killed():
 
 @pytest.mark.recovery
 def test_all_executors_killed():
-    for host in shakedown.get_service_ips(SERVICE_NAME):
+    for host in shakedown.get_service_ips(PACKAGE_NAME):
         kill_task_with_pattern('cassandra.executor.Main', host)
 
     check_health()
@@ -249,7 +249,7 @@ def test_partition_master_outgoing():
 
 @pytest.mark.recovery
 def test_all_partition():
-    hosts = shakedown.get_service_ips(SERVICE_NAME)
+    hosts = shakedown.get_service_ips(PACKAGE_NAME)
 
     for host in hosts:
         shakedown.partition_agent(host)
@@ -272,7 +272,7 @@ def test_config_update_then_kill_task_in_node():
 
 @pytest.mark.recovery
 def test_config_update_then_kill_all_task_in_node():
-    hosts = shakedown.get_service_ips(SERVICE_NAME)
+    hosts = shakedown.get_service_ips(PACKAGE_NAME)
     run_planned_operation(
         bump_cpu_count_config,
         lambda: [kill_task_with_pattern('CassandraDaemon', h) for h in hosts]
@@ -305,7 +305,7 @@ def test_config_update_then_executor_killed():
 
 @pytest.mark.recovery
 def test_config_update_then_all_executors_killed():
-    hosts = shakedown.get_service_ips(SERVICE_NAME)
+    hosts = shakedown.get_service_ips(PACKAGE_NAME)
     run_planned_operation(
         bump_cpu_count_config,
         lambda: [
@@ -349,7 +349,7 @@ def test_config_update_then_partition():
 
 @pytest.mark.recovery
 def test_config_update_then_all_partition():
-    hosts = shakedown.get_service_ips(SERVICE_NAME)
+    hosts = shakedown.get_service_ips(PACKAGE_NAME)
 
     def partition():
         for host in hosts:
@@ -375,7 +375,7 @@ def test_cleanup_then_kill_task_in_node():
 
 @pytest.mark.recovery
 def test_cleanup_then_kill_all_task_in_node():
-    hosts = shakedown.get_service_ips(SERVICE_NAME)
+    hosts = shakedown.get_service_ips(PACKAGE_NAME)
     run_planned_operation(
         run_cleanup,
         lambda: [kill_task_with_pattern('CassandraDaemon', h) for h in hosts]
@@ -408,7 +408,7 @@ def test_cleanup_then_executor_killed():
 
 @pytest.mark.recovery
 def test_cleanup_then_all_executors_killed():
-    hosts = shakedown.get_service_ips(SERVICE_NAME)
+    hosts = shakedown.get_service_ips(PACKAGE_NAME)
     run_planned_operation(
         run_cleanup(),
         lambda: [
@@ -452,7 +452,7 @@ def test_cleanup_then_partition():
 
 @pytest.mark.recovery
 def test_cleanup_then_all_partition():
-    hosts = shakedown.get_service_ips(SERVICE_NAME)
+    hosts = shakedown.get_service_ips(PACKAGE_NAME)
 
     def partition():
         for host in hosts:
@@ -478,7 +478,7 @@ def test_repair_then_kill_task_in_node():
 
 @pytest.mark.recovery
 def test_repair_then_kill_all_task_in_node():
-    hosts = shakedown.get_service_ips(SERVICE_NAME)
+    hosts = shakedown.get_service_ips(PACKAGE_NAME)
     run_planned_operation(
         run_repair,
         lambda: [kill_task_with_pattern('CassandraDaemon', h) for h in hosts]
@@ -511,7 +511,7 @@ def test_repair_then_executor_killed():
 
 @pytest.mark.recovery
 def test_repair_then_all_executors_killed():
-    hosts = shakedown.get_service_ips(SERVICE_NAME)
+    hosts = shakedown.get_service_ips(PACKAGE_NAME)
     run_planned_operation(
         run_repair,
         lambda: [
@@ -557,7 +557,7 @@ def test_repair_then_partition():
 
 @pytest.mark.recovery
 def test_repair_then_all_partition():
-    hosts = shakedown.get_service_ips(SERVICE_NAME)
+    hosts = shakedown.get_service_ips(PACKAGE_NAME)
 
     def partition():
         for host in hosts:

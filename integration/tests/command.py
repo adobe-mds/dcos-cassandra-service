@@ -9,10 +9,9 @@ import shakedown
 from tests.defaults import (
     DEFAULT_NODE_COUNT,
     DEFAULT_OPTIONS_DICT,
-    SERVICE_NAME,
+    PACKAGE_NAME,
     PRINCIPAL,
     TASK_RUNNING_STATE,
-    PACKAGE_NAME,
 )
 
 
@@ -38,9 +37,9 @@ def cassandra_api_url(basename, app_id='cassandra'):
 def check_health(wait_time=WAIT_TIME_IN_SECONDS):
     def fn():
         try:
-            tasks = shakedown.get_service_tasks(SERVICE_NAME)
+            tasks = shakedown.get_service_tasks(PACKAGE_NAME)
         except dcos.errors.DCOSHTTPException:
-            print('Failed to get tasks for service {}'.format(SERVICE_NAME))
+            print('Failed to get tasks for service {}'.format(PACKAGE_NAME))
             tasks = []
         return tasks
 
@@ -59,13 +58,13 @@ def check_health(wait_time=WAIT_TIME_IN_SECONDS):
 def get_cassandra_config():
     response = request(
         dcos.http.get,
-        marathon_api_url('apps/{}/versions'.format(SERVICE_NAME))
+        marathon_api_url('apps/{}/versions'.format(PACKAGE_NAME))
     )
     assert response.status_code == 200, 'Marathon versions request failed'
 
     version = response.json()['versions'][0]
 
-    response = dcos.http.get(marathon_api_url('apps/{}/versions/{}'.format(SERVICE_NAME, version)))
+    response = dcos.http.get(marathon_api_url('apps/{}/versions/{}'.format(PACKAGE_NAME, version)))
     assert response.status_code == 200
 
     config = response.json()
@@ -80,7 +79,7 @@ def get_dcos_command(command):
     stdout, stderr, rc = shakedown.run_dcos_command(command)
     if rc:
         raise RuntimeError(
-            'command dcos {} {} failed: {} {}'.format(command, SERVICE_NAME, stdout, stderr)
+            'command dcos {} {} failed: {} {}'.format(command, PACKAGE_NAME, stdout, stderr)
         )
 
     return stdout
@@ -89,11 +88,11 @@ def get_dcos_command(command):
 @as_json
 def get_cassandra_command(command):
     stdout, stderr, rc = shakedown.run_dcos_command(
-        '{} {}'.format(SERVICE_NAME, command)
+        '{} {}'.format(PACKAGE_NAME, command)
     )
     if rc:
         raise RuntimeError(
-            'command dcos {} {} failed: {} {}'.format(command, SERVICE_NAME, stdout, stderr)
+            'command dcos {} {} failed: {} {}'.format(command, PACKAGE_NAME, stdout, stderr)
         )
 
     return stdout
@@ -150,15 +149,15 @@ def install(additional_options = {}, package_version = None, wait = True):
 
 
 def uninstall():
-    print('Uninstalling/janitoring {}'.format(SERVICE_NAME))
+    print('Uninstalling/janitoring {}'.format(PACKAGE_NAME))
     try:
-        shakedown.uninstall_package_and_wait(PACKAGE_NAME, service_name=SERVICE_NAME)
+        shakedown.uninstall_package_and_wait(PACKAGE_NAME, service_name=PACKAGE_NAME)
     except (dcos.errors.DCOSException, ValueError) as e:
         print('Got exception when uninstalling package, continuing with janitor anyway: {}'.format(e))
 
     shakedown.run_command_on_master(
         'sudo docker run mesosphere/janitor /janitor.py '
-        '-r cassandra-role -p {} -z dcos-service-cassandra '
+        '-r mds-cassandra-role -p {} -z dcos-service-mds-cassandra '
         '--auth_token={}'.format(
             PRINCIPAL,
             shakedown.run_dcos_command(

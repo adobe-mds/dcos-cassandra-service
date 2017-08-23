@@ -16,7 +16,7 @@ from tests.command import (
     uninstall,
 )
 
-from tests.defaults import DEFAULT_NODE_COUNT, SERVICE_NAME
+from tests.defaults import DEFAULT_NODE_COUNT, PACKAGE_NAME
 
 def setup_module(module):
     uninstall()
@@ -67,7 +67,7 @@ def get_test_repo_info():
 
 
 def get_pkg_version():
-    cmd = 'package describe {}'.format(SERVICE_NAME)
+    cmd = 'package describe {}'.format(PACKAGE_NAME)
     print("get_pkg_version cmd: " + cmd)
     pkg_description = get_dcos_command(cmd)
     print("pkg_description: " + pkg_description)
@@ -97,11 +97,11 @@ def new_default_version_available(prev_version):
 
 
 def destroy_service():
-    destroy_endpoint = marathon_api_url_with_param('apps', SERVICE_NAME)
+    destroy_endpoint = marathon_api_url_with_param('apps', PACKAGE_NAME)
     request(dcos.http.delete, destroy_endpoint)
     # Make sure the scheduler has been destroyed
     def fn():
-        shakedown.get_service(SERVICE_NAME)
+        shakedown.get_service(PACKAGE_NAME)
 
     def success_predicate(service):
         return (service == None, 'Service not destroyed')
