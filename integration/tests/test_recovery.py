@@ -1,6 +1,9 @@
 import dcos
 import pytest
 import shakedown
+import time
+
+from requests.exceptions import ConnectionError
 
 from dcos.errors import DCOSException
 
@@ -26,11 +29,22 @@ def bump_cpu_count_config():
         float(config['env']['CASSANDRA_CPUS']) + 0.1
     )
 
-    return request(
+    print("Bump CPU config")
+    print (marathon_api_url('apps/'+PACKAGE_NAME))
+    time.sleep(6)
+    print (config)
+    plan = dcos.http.get(cassandra_api_url('plan'), is_success=allow_incomplete_plan)
+    print(plan)
+    print(plan.json())
+    response =  request(
         dcos.http.put,
         marathon_api_url('apps/' + PACKAGE_NAME),
         json=config
     )
+    print(response)
+    print(response.text)
+    return response
+
 
 
 counter = 0
@@ -146,19 +160,42 @@ def _block_on_adminrouter():
     print("Adminrouter is up.  Master IP: {}".format(ip))
 
 
+# def check_master_health(master_ip):
+#     def get_node_health():
+#         try:
+#             response = dcos.http.get(exhibitor_api_url('cluster/state/' + master_ip))
+#         except DCOSException as e:
+#             print("Master IP {} not accessible: ".format(master_ip), e.args)
+#         return response
+#
+#     request(get_node_health, master_ip)
+#     print("Master is up again.  Master IP: {}".format(master_ip))
+
+
 def check_master_health(master_ip):
-    def get_node_health():
+    def get_node_health(master_ip):
         try:
-            response = dcos.http.get(exhibitor_api_url('cluster/state/' + master_ip))
+            response = dcos.http.post("http://" + master_ip + ":5050/api/v1",json={"type":"GET_HEALTH"})
         except DCOSException as e:
-            print("Master IP {} not accessible: ".format(master_ip), e.args)
+            print("Master IP {} not accessible: ".format(master_ip))
         return response
 
-    request(get_node_health, master_ip)
+    def success(response):
+        error_message = "Failed to parse json"
+        try:
+            body = response.json()
+        except Exception as e:
+            print(e)
+            return False, error_message
+
+        is_healthy = response.json()['get_health']['healthy']
+        print(is_healthy)
+        return is_healthy, "Master is not healthy yet"
+
+    spin(get_node_health, success, 600, master_ip)
     print("Master is up again.  Master IP: {}".format(master_ip))
 
 
-# install once up-front, reuse install for tests (MUCH FASTER):
 def setup_module():
     unset_ssl_verification()
 
@@ -215,7 +252,7 @@ def test_master_killed():
 
     print(shakedown.get_all_master_ips())
     check_health()
-    check_master_health()
+    check_master_health(master_leader_ip)
 
 
 @pytest.mark.recovery
@@ -225,7 +262,7 @@ def test_zk_killed():
 
     print(shakedown.get_all_master_ips())
     check_health()
-    check_master_health()
+    check_master_health(master_leader_ip)
 
 
 @pytest.mark.recovery

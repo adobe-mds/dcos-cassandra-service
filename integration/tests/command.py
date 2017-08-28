@@ -99,7 +99,7 @@ def get_cassandra_command(command):
 
 
 def exhibitor_api_url(path):
-    return 'exhibitor/exhibitor/v1/{}'.format(path)
+    return '{}/exhibitor/exhibitor/v1/{}'.format(shakedown.dcos_url(), path)
 
 
 def marathon_api_url(basename):
