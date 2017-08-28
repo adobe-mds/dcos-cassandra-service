@@ -30,7 +30,7 @@ def as_json(fn):
     return wrapper
 
 
-def cassandra_api_url(basename, app_id='cassandra'):
+def cassandra_api_url(basename, app_id=PACKAGE_NAME):
     return '{}/v1/{}'.format(shakedown.dcos_service_url(app_id), basename)
 
 
@@ -96,6 +96,10 @@ def get_cassandra_command(command):
         )
 
     return stdout
+
+
+def exhibitor_api_url(path):
+    return 'exhibitor/exhibitor/v1/{}'.format(path)
 
 
 def marathon_api_url(basename):

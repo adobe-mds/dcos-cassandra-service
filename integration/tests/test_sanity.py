@@ -1,5 +1,3 @@
-import json
-import dcos
 import pytest
 import time
 
@@ -18,7 +16,7 @@ from tests.command import (
     uninstall,
     unset_ssl_verification,
 )
-from tests.defaults import DEFAULT_NODE_COUNT, SERVICE_NAME
+from tests.defaults import DEFAULT_NODE_COUNT, PACKAGE_NAME
 
 
 # install once up-front, reuse install for tests (MUCH FASTER):
@@ -49,7 +47,7 @@ def test_connect():
     assert len(body) == 3
     assert len(body["address"]) == DEFAULT_NODE_COUNT
     assert len(body["dns"]) == DEFAULT_NODE_COUNT
-    assert body["vip"] == 'node.{}.l4lb.thisdcos.directory:9042'.format(SERVICE_NAME)
+    assert body["vip"] == 'node.{}.l4lb.thisdcos.directory:9042'.format(PACKAGE_NAME)
 
 
 @pytest.mark.sanity

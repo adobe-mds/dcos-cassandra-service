@@ -2,11 +2,14 @@ import dcos
 import pytest
 import shakedown
 
+from dcos.errors import DCOSException
+
 from tests.command import (
     cassandra_api_url,
     check_health,
     get_cassandra_config,
     install,
+    exhibitor_api_url,
     marathon_api_url,
     request,
     spin,
@@ -25,7 +28,7 @@ def bump_cpu_count_config():
 
     return request(
         dcos.http.put,
-        marathon_api_url('apps/cassandra'),
+        marathon_api_url('apps/' + PACKAGE_NAME),
         json=config
     )
 
@@ -42,7 +45,8 @@ def get_and_verify_plan(predicate=lambda r: True):
 
         try:
             body = result.json()
-        except:
+        except Exception as e:
+            print(e)
             return False, message
 
         if counter < 3:
@@ -104,7 +108,9 @@ def run_cleanup():
 
 def run_planned_operation(operation, failure=lambda: None):
     plan = get_and_verify_plan()
+    print("Running operation")
     operation()
+    print("Verify plan after operation")
     next_plan = get_and_verify_plan(
         lambda p: (
             plan['phases'][1]['id'] != p['phases'][1]['id'] or
@@ -112,7 +118,9 @@ def run_planned_operation(operation, failure=lambda: None):
             p['status'] == infinity_commons.PlanState.IN_PROGRESS.value
         )
     )
+    print("Run failure operation")
     failure()
+    print("Verify plan after operation")
     completed_plan = get_and_verify_plan(lambda p: p['status'] == infinity_commons.PlanState.COMPLETE.value)
 
 
@@ -125,7 +133,7 @@ def run_repair():
     )
 
 
-def _block_on_adminrouter(master_ip):
+def _block_on_adminrouter():
     def get_master_ip():
         return shakedown.master_ip()
 
@@ -136,6 +144,18 @@ def _block_on_adminrouter(master_ip):
     print("Ensuring adminrouter is up...")
     ip = spin(get_master_ip, is_up)
     print("Adminrouter is up.  Master IP: {}".format(ip))
+
+
+def check_master_health(master_ip):
+    def get_node_health():
+        try:
+            response = dcos.http.get(exhibitor_api_url('cluster/state/' + master_ip))
+        except DCOSException as e:
+            print("Master IP {} not accessible: ".format(master_ip), e.args)
+        return response
+
+    request(get_node_health, master_ip)
+    print("Master is up again.  Master IP: {}".format(master_ip))
 
 
 # install once up-front, reuse install for tests (MUCH FASTER):
@@ -195,7 +215,7 @@ def test_master_killed():
 
     print(shakedown.get_all_master_ips())
     check_health()
-    _block_on_adminrouter(master_leader_ip)
+    check_master_health()
 
 
 @pytest.mark.recovery
@@ -205,7 +225,7 @@ def test_zk_killed():
 
     print(shakedown.get_all_master_ips())
     check_health()
-    _block_on_adminrouter(master_leader_ip)
+    check_master_health()
 
 
 @pytest.mark.recovery
@@ -409,7 +429,7 @@ def test_cleanup_then_executor_killed():
 def test_cleanup_then_all_executors_killed():
     hosts = shakedown.get_service_ips(PACKAGE_NAME)
     run_planned_operation(
-        run_cleanup(),
+        run_cleanup,
         lambda: [
             kill_task_with_pattern('cassandra.executor.Main', h) for h in hosts
         ]
@@ -421,7 +441,7 @@ def test_cleanup_then_all_executors_killed():
 @pytest.mark.recovery
 def test_cleanup_then_master_killed():
     run_planned_operation(
-        run_cleanup(), lambda: kill_task_with_pattern('mesos-master')
+        run_cleanup, lambda: kill_task_with_pattern('mesos-master')
     )
 
     check_health()
@@ -430,7 +450,7 @@ def test_cleanup_then_master_killed():
 @pytest.mark.recovery
 def test_cleanup_then_zk_killed():
     run_planned_operation(
-        run_cleanup(), lambda: kill_task_with_pattern('zookeeper')
+        run_cleanup, lambda: kill_task_with_pattern('zookeeper')
     )
 
     check_health()
