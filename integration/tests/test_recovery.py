@@ -162,8 +162,8 @@ def _block_on_adminrouter_new(master_ip):
     def get_node_health(master_ip):
         response = None
         try:
-            auth = "Authorization: token=" + shakedown.dcos_acs_token()
-            response = requests.get("http://" + master_ip + "/metadata", auth=auth)
+            headers = {'Authorization': "token={}".format(shakedown.dcos_acs_token())}
+            response = requests.get("http://" + master_ip + "/metadata", headers=headers)
         except Exception as e:
             print(e)
             print("Master IP {} not accessible: ".format(master_ip))
@@ -181,7 +181,7 @@ def _block_on_adminrouter_new(master_ip):
         print(is_healthy)
         return is_healthy, "Master is not healthy yet"
 
-    spin(get_node_health, success, 600, master_ip)
+    spin(get_node_health, success, 300, master_ip)
     print("Master is up again.  Master IP: {}".format(master_ip))
 
 
@@ -218,8 +218,8 @@ def setup_module():
     check_health()
 
 
-def teardown_module():
-    uninstall()
+# def teardown_module():
+#     uninstall()
 
 
 @pytest.mark.recovery
@@ -264,7 +264,7 @@ def test_master_killed():
     master_leader_ip = shakedown.master_leader_ip()
     kill_task_with_pattern('mesos-master', master_leader_ip)
 
-    _block_on_adminrouter_new(master_leader_ip)
+    check_master_health(master_leader_ip)
 
 
 @pytest.mark.recovery
