@@ -1,6 +1,7 @@
 import dcos
 import pytest
 import shakedown
+import requests
 import time
 
 from requests.exceptions import ConnectionError
@@ -161,8 +162,10 @@ def _block_on_adminrouter_new(master_ip):
     def get_node_health(master_ip):
         response = None
         try:
-            response = dcos.http.get("http://" + master_ip + "/metadata")
-        except DCOSException as e:
+            auth = "Authorization: token=" + shakedown.dcos_acs_token()
+            response = requests.get("http://" + master_ip + "/metadata", auth=auth)
+        except Exception as e:
+            print(e)
             print("Master IP {} not accessible: ".format(master_ip))
         return response
 
