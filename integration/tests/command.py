@@ -161,9 +161,10 @@ def uninstall():
 
     shakedown.run_command_on_master(
         'sudo docker run mesosphere/janitor /janitor.py '
-        '-r mds-cassandra-role -p {} -z dcos-service-mds-cassandra '
-        '--auth_token={}'.format(
+        '-r {}-role -p {} -z dcos-service-{} '
+        '--auth_token={}'.format(PACKAGE_NAME,
             PRINCIPAL,
+            PACKAGE_NAME,
             shakedown.run_dcos_command(
                 'config show core.dcos_acs_token'
             )[0].strip()
