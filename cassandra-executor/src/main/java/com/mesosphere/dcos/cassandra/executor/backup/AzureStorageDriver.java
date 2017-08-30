@@ -44,7 +44,7 @@ import com.microsoft.azure.storage.blob.ListBlobItem;
  */
 public class AzureStorageDriver implements BackupStorageDriver {
 
-  private final Logger logger = LoggerFactory.getLogger(getClass());
+  private static final Logger logger = LoggerFactory.getLogger(AzureStorageDriver.class);
 
   private static final int DEFAULT_PART_SIZE_UPLOAD = 4 * 1024 * 1024; // Chunk size set to 4MB
   private static final int DEFAULT_PART_SIZE_DOWNLOAD = 4 * 1024 * 1024; // Chunk size set to 4MB
