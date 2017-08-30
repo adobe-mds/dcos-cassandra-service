@@ -30,11 +30,8 @@ def bump_cpu_count_config():
     )
 
     print("Bump CPU config")
-    print (marathon_api_url('apps/'+PACKAGE_NAME))
-    time.sleep(6)
-    print (config)
+    print(marathon_api_url('apps/'+PACKAGE_NAME))
     plan = dcos.http.get(cassandra_api_url('plan'), is_success=allow_incomplete_plan)
-    print(plan)
     print(plan.json())
     response =  request(
         dcos.http.put,
@@ -46,10 +43,10 @@ def bump_cpu_count_config():
     return response
 
 
-
 counter = 0
 def get_and_verify_plan(predicate=lambda r: True):
     global counter
+
     def fn():
         return dcos.http.get(cassandra_api_url('plan'), is_success=allow_incomplete_plan)
 
@@ -134,7 +131,7 @@ def run_planned_operation(operation, failure=lambda: None):
     )
     print("Run failure operation")
     failure()
-    print("Verify plan after operation")
+    print("Verify plan after failure")
     completed_plan = get_and_verify_plan(lambda p: p['status'] == infinity_commons.PlanState.COMPLETE.value)
 
 
@@ -174,6 +171,7 @@ def _block_on_adminrouter():
 
 def check_master_health(master_ip):
     def get_node_health(master_ip):
+        response = None
         try:
             response = dcos.http.post("http://" + master_ip + ":5050/api/v1",json={"type":"GET_HEALTH"})
         except DCOSException as e:
