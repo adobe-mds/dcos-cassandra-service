@@ -147,8 +147,9 @@ public class AzureStorageDriver implements BackupStorageDriver {
       bufferedOutputStream = new BufferedOutputStream(pageBlobOutputStream);
 
       compress = new SnappyOutputStream(bufferedOutputStream, DEFAULT_PART_SIZE_UPLOAD);
+      logger.info("Streams initialized. Starting upload");
       IOUtils.copy(inputStream, compress, DEFAULT_PART_SIZE_UPLOAD);
-
+      logger.info("Upload Complete");
     } catch (StorageException | URISyntaxException | IOException e) {
       logger.error("Unable to store blob", e);
     } finally {
@@ -169,7 +170,9 @@ public class AzureStorageDriver implements BackupStorageDriver {
       bufferedOutputStream = new BufferedOutputStream(pageBlobOutputStream);
 
       compress = new SnappyOutputStream(bufferedOutputStream, DEFAULT_PART_SIZE_UPLOAD);
+      logger.info("Streams initialized. Starting upload");
       IOUtils.copy(inputStream, compress, DEFAULT_PART_SIZE_UPLOAD);
+      logger.info("Upload Complete");
 
     } catch (StorageException | URISyntaxException | IOException e) {
       logger.error("Unable to store blob", e);
