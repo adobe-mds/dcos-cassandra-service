@@ -157,16 +157,29 @@ def _block_on_adminrouter():
     print("Adminrouter is up.  Master IP: {}".format(ip))
 
 
-# def check_master_health(master_ip):
-#     def get_node_health():
-#         try:
-#             response = dcos.http.get(exhibitor_api_url('cluster/state/' + master_ip))
-#         except DCOSException as e:
-#             print("Master IP {} not accessible: ".format(master_ip), e.args)
-#         return response
-#
-#     request(get_node_health, master_ip)
-#     print("Master is up again.  Master IP: {}".format(master_ip))
+def _block_on_adminrouter_new(master_ip):
+    def get_node_health(master_ip):
+        response = None
+        try:
+            response = dcos.http.get("http://" + master_ip + "/metadata")
+        except DCOSException as e:
+            print("Master IP {} not accessible: ".format(master_ip))
+        return response
+
+    def success(response):
+        error_message = "Failed to parse json"
+        try:
+            body = response.json()
+        except Exception as e:
+            print(e)
+            return False, error_message
+
+        is_healthy = response.json()['PUBLIC_IPV4'] == master_ip
+        print(is_healthy)
+        return is_healthy, "Master is not healthy yet"
+
+    spin(get_node_health, success, 600, master_ip)
+    print("Master is up again.  Master IP: {}".format(master_ip))
 
 
 def check_master_health(master_ip):
@@ -197,8 +210,8 @@ def check_master_health(master_ip):
 def setup_module():
     unset_ssl_verification()
 
-    uninstall()
-    install()
+#    uninstall()
+#    install()
     check_health()
 
 
@@ -248,9 +261,7 @@ def test_master_killed():
     master_leader_ip = shakedown.master_leader_ip()
     kill_task_with_pattern('mesos-master', master_leader_ip)
 
-    print(shakedown.get_all_master_ips())
-    check_health()
-    check_master_health(master_leader_ip)
+    _block_on_adminrouter_new(master_leader_ip)
 
 
 @pytest.mark.recovery
@@ -258,9 +269,7 @@ def test_zk_killed():
     master_leader_ip = shakedown.master_leader_ip()
     kill_task_with_pattern('zookeeper', master_leader_ip)
 
-    print(shakedown.get_all_master_ips())
-    check_health()
-    check_master_health(master_leader_ip)
+    _block_on_adminrouter_new(master_leader_ip)
 
 
 @pytest.mark.recovery
@@ -372,8 +381,9 @@ def test_config_update_then_all_executors_killed():
 
 @pytest.mark.recovery
 def test_config_update_then_master_killed():
+    master_leader_ip = shakedown.master_leader_ip()
     run_planned_operation(
-        bump_cpu_count_config, lambda: kill_task_with_pattern('mesos-master')
+        bump_cpu_count_config, lambda: kill_task_with_pattern('mesos-master', master_leader_ip)
     )
 
     check_health()
@@ -381,8 +391,9 @@ def test_config_update_then_master_killed():
 
 @pytest.mark.recovery
 def test_config_update_then_zk_killed():
+    master_leader_ip = shakedown.master_leader_ip()
     run_planned_operation(
-        bump_cpu_count_config, lambda: kill_task_with_pattern('zookeeper')
+        bump_cpu_count_config, lambda: kill_task_with_pattern('zookeeper', master_leader_ip)
     )
 
     check_health()
@@ -475,8 +486,9 @@ def test_cleanup_then_all_executors_killed():
 
 @pytest.mark.recovery
 def test_cleanup_then_master_killed():
+    master_leader_ip = shakedown.master_leader_ip()
     run_planned_operation(
-        run_cleanup, lambda: kill_task_with_pattern('mesos-master')
+        run_cleanup, lambda: kill_task_with_pattern('mesos-master', master_leader_ip)
     )
 
     check_health()
@@ -484,8 +496,9 @@ def test_cleanup_then_master_killed():
 
 @pytest.mark.recovery
 def test_cleanup_then_zk_killed():
+    master_leader_ip = shakedown.master_leader_ip()
     run_planned_operation(
-        run_cleanup, lambda: kill_task_with_pattern('zookeeper')
+        run_cleanup, lambda: kill_task_with_pattern('zookeeper', master_leader_ip)
     )
 
     check_health()
@@ -578,9 +591,10 @@ def test_repair_then_all_executors_killed():
 
 @pytest.mark.recovery
 def test_repair_then_master_killed():
+    master_leader_ip = shakedown.master_leader_ip()
     run_planned_operation(
         run_repair,
-        lambda: kill_task_with_pattern('mesos-master')
+        lambda: kill_task_with_pattern('mesos-master', master_leader_ip)
     )
 
     check_health()
@@ -588,9 +602,10 @@ def test_repair_then_master_killed():
 
 @pytest.mark.recovery
 def test_repair_then_zk_killed():
+    master_leader_ip = shakedown.master_leader_ip()
     run_planned_operation(
         run_repair,
-        lambda: kill_task_with_pattern('zookeeper')
+        lambda: kill_task_with_pattern('zookeeper', master_leader_ip)
     )
 
     check_health()
