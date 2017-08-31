@@ -401,6 +401,7 @@ def test_config_update_then_zk_killed():
         bump_cpu_count_config, lambda: kill_task_with_pattern('zookeeper', master_leader_ip)
     )
 
+    _block_on_adminrouter_new(master_leader_ip)
     check_health()
 
 
@@ -506,6 +507,7 @@ def test_cleanup_then_zk_killed():
         run_cleanup, lambda: kill_task_with_pattern('zookeeper', master_leader_ip)
     )
 
+    _block_on_adminrouter_new(master_leader_ip)
     check_health()
 
 
@@ -613,6 +615,7 @@ def test_repair_then_zk_killed():
         lambda: kill_task_with_pattern('zookeeper', master_leader_ip)
     )
 
+    _block_on_adminrouter_new(master_leader_ip)
     check_health()
 
 
