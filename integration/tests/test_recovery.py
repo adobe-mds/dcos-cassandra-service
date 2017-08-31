@@ -69,7 +69,7 @@ def get_and_verify_plan(predicate=lambda r: True):
 
 
 def request_success(status_code):
-    return 200 <= status_code < 300 or status_code == 503 or status_code == 502 or status_code == 409
+    return 200 <= status_code < 300 or 500 <= status_code <= 503 or status_code == 409
 
 
 def get_node_host():
