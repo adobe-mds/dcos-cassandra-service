@@ -159,10 +159,10 @@ def _block_on_adminrouter():
 
 def _block_on_adminrouter_new(master_ip):
     headers = {'Authorization': "token={}".format(shakedown.dcos_acs_token())}
-    health_check_url = "http://{}/metadata".format(master_ip)
+    metadata = "http://{}/metadata".format(master_ip)
 
-    def get_node_health():
-        response = requests.get(health_check_url, headers=headers)
+    def get_metadata():
+        response = requests.get(metadata, headers=headers)
         return response
 
     def success(response):
@@ -174,7 +174,7 @@ def _block_on_adminrouter_new(master_ip):
         except Exception as e:
             return False, error_message
 
-    spin(get_node_health, success, 300, master_ip)
+    spin(get_metadata, success, 300)
     print("Master is up again.  Master IP: {}".format(master_ip))
 
 
@@ -201,15 +201,15 @@ def check_master_health(master_ip):
         print(is_healthy)
         return is_healthy, "Master is not healthy yet"
 
-    spin(get_node_health, success, 600, master_ip)
+    spin(get_node_health, success, 600)
     print("Master is up again.  Master IP: {}".format(master_ip))
 
 
 def setup_module():
     unset_ssl_verification()
 
-    uninstall()
-    install()
+#    uninstall()
+#    install()
     check_health()
 
 
@@ -218,7 +218,7 @@ def setup_module():
 
 
 @pytest.mark.recovery
-def test_kill_task_in_node():
+def test_code():
     master_leader_ip = shakedown.master_leader_ip()
     _block_on_adminrouter_new(master_leader_ip)
     check_master_health(master_leader_ip)
