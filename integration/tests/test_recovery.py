@@ -248,7 +248,7 @@ def test_executor_killed():
 def test_all_executors_killed():
     for host in shakedown.get_service_ips(PACKAGE_NAME):
         kill_task_with_pattern('cassandra.executor.Main', host)
-    time.sleep(5)
+
     check_health()
 
 
@@ -478,7 +478,7 @@ def test_cleanup_then_all_executors_killed():
             kill_task_with_pattern('cassandra.executor.Main', h) for h in hosts
         ]
     )
-    time.sleep(5)
+
     check_health()
 
 
@@ -583,7 +583,7 @@ def test_repair_then_all_executors_killed():
             kill_task_with_pattern('cassandra.executor.Main', h) for h in hosts
         ]
     )
-    time.sleep(5)
+
     check_health()
 
 
