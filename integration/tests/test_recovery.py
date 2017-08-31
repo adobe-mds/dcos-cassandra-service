@@ -159,19 +159,18 @@ def _block_on_adminrouter():
 
 def _block_on_adminrouter_new(master_ip):
     headers = {'Authorization': "token={}".format(shakedown.dcos_acs_token())}
-    metadata = "http://{}/metadata".format(master_ip)
+    metadata_url = "http://{}/metadata".format(master_ip)
 
     def get_metadata():
-        response = requests.get(metadata, headers=headers)
+        response = requests.get(metadata_url, headers=headers)
         return response
 
     def success(response):
         error_message = "Failed to parse json"
         try:
             is_healthy = response.json()['PUBLIC_IPV4'] == master_ip
-            print(is_healthy)
             return is_healthy, "Master is not healthy yet"
-        except Exception as e:
+        except Exception:
             return False, error_message
 
     spin(get_metadata, success, 300)
@@ -182,27 +181,23 @@ def check_master_health(master_ip):
     health_check_url = "http://{}:5050/api/v1".format(master_ip)
     payload = {"type": "GET_HEALTH"}
 
-    def get_node_health(master_ip):
+    def get_node_health():
         response = None
         try:
             response = dcos.http.post(
                 health_check_url,
                 json=payload)
-        except DCOSException as e:
+        except DCOSException:
             print("Master IP {} not accessible: ".format(master_ip))
         return response
 
     def success(response):
         error_message = "Failed to parse json"
         try:
-            response.json()
-        except Exception as e:
-            print(e)
+            is_healthy = response.json()['get_health']['healthy']
+            return is_healthy, "Master is not healthy yet"
+        except Exception:
             return False, error_message
-
-        is_healthy = response.json()['get_health']['healthy']
-        print(is_healthy)
-        return is_healthy, "Master is not healthy yet"
 
     spin(get_node_health, success, 600)
     print("Master is up again.  Master IP: {}".format(master_ip))
@@ -211,21 +206,13 @@ def check_master_health(master_ip):
 def setup_module():
     unset_ssl_verification()
 
-#    uninstall()
-#    install()
+    uninstall()
+    install()
     check_health()
 
 
 # def teardown_module():
 #     uninstall()
-
-
-@pytest.mark.recovery
-def test_code():
-    master_leader_ip = shakedown.master_leader_ip()
-    _block_on_adminrouter_new(master_leader_ip)
-    check_master_health(master_leader_ip)
-    check_health()
 
 
 @pytest.mark.recovery
@@ -271,6 +258,7 @@ def test_master_killed():
     kill_task_with_pattern('mesos-master', master_leader_ip)
 
     check_master_health(master_leader_ip)
+    check_health()
 
 
 @pytest.mark.recovery
@@ -279,6 +267,7 @@ def test_zk_killed():
     kill_task_with_pattern('zookeeper', master_leader_ip)
 
     _block_on_adminrouter_new(master_leader_ip)
+    check_health()
 
 
 @pytest.mark.recovery
