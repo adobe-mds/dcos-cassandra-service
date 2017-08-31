@@ -30,14 +30,11 @@ def bump_cpu_count_config():
         float(config['env']['CASSANDRA_CPUS']) + 0.1
     )
 
-    print("Bump CPU config")
-    print(marathon_api_url('apps/'+PACKAGE_NAME))
-    plan = dcos.http.get(cassandra_api_url('plan'), is_success=allow_incomplete_plan)
-    print(plan.json())
     response =  request(
         dcos.http.put,
         marathon_api_url('apps/' + PACKAGE_NAME),
-        json=config
+        json=config,
+        is_success=request_success
     )
     print(response)
     print(response.text)
@@ -49,7 +46,7 @@ def get_and_verify_plan(predicate=lambda r: True):
     global counter
 
     def fn():
-        return dcos.http.get(cassandra_api_url('plan'), is_success=allow_incomplete_plan)
+        return dcos.http.get(cassandra_api_url('plan'), is_success=request_success)
 
     def success_predicate(result):
         global counter
@@ -57,22 +54,22 @@ def get_and_verify_plan(predicate=lambda r: True):
 
         try:
             body = result.json()
-        except Exception as e:
-            print(e)
+        except Exception:
             return False, message
 
         if counter < 3:
             counter += 1
 
-        if predicate(body): counter = 0
+        if predicate(body):
+            counter = 0
 
         return predicate(body), message
 
     return spin(fn, success_predicate).json()
 
 
-def allow_incomplete_plan(status_code):
-    return 200 <= status_code < 300 or status_code == 503 or status_code == 502 or status_code == 500 or status_code == 409
+def request_success(status_code):
+    return 200 <= status_code < 300 or status_code == 503 or status_code == 502 or status_code == 409
 
 
 def get_node_host():
@@ -115,15 +112,16 @@ def run_cleanup():
         dcos.http.put,
         cassandra_api_url('cleanup/start'),
         json=payload,
+        is_success=request_success
     )
 
 
 def run_planned_operation(operation, failure=lambda: None):
     plan = get_and_verify_plan()
-    print("Running operation")
+    print("Running planned operation")
     operation()
     print("Verify plan after operation")
-    next_plan = get_and_verify_plan(
+    get_and_verify_plan(
         lambda p: (
             plan['phases'][1]['id'] != p['phases'][1]['id'] or
             len(plan['phases']) < len(p['phases']) or
@@ -133,7 +131,7 @@ def run_planned_operation(operation, failure=lambda: None):
     print("Run failure operation")
     failure()
     print("Verify plan after failure")
-    completed_plan = get_and_verify_plan(lambda p: p['status'] == infinity_commons.PlanState.COMPLETE.value)
+    get_and_verify_plan(lambda p: p['status'] == infinity_commons.PlanState.COMPLETE.value)
 
 
 def run_repair():
@@ -142,6 +140,7 @@ def run_repair():
         dcos.http.put,
         cassandra_api_url('repair/start'),
         json=payload,
+        is_success=request_success
     )
 
 
@@ -159,45 +158,41 @@ def _block_on_adminrouter():
 
 
 def _block_on_adminrouter_new(master_ip):
-    def get_node_health(master_ip):
-        response = None
-        try:
-            headers = {'Authorization': "token={}".format(shakedown.dcos_acs_token())}
-            response = requests.get("http://" + master_ip + "/metadata", headers=headers)
-        except Exception as e:
-            print(e)
-            print("Master IP {} not accessible: ".format(master_ip))
+    headers = {'Authorization': "token={}".format(shakedown.dcos_acs_token())}
+    health_check_url = "http://{}/metadata".format(master_ip)
+
+    def get_node_health():
+        response = requests.get(health_check_url, headers=headers)
         return response
 
     def success(response):
         error_message = "Failed to parse json"
         try:
-            body = response.json()
+            is_healthy = response.json()['PUBLIC_IPV4'] == master_ip
+            print(is_healthy)
+            return is_healthy, "Master is not healthy yet"
         except Exception as e:
-            print(e)
             return False, error_message
-
-        is_healthy = response.json()['PUBLIC_IPV4'] == master_ip
-        print(is_healthy)
-        return is_healthy, "Master is not healthy yet"
 
     spin(get_node_health, success, 300, master_ip)
     print("Master is up again.  Master IP: {}".format(master_ip))
 
 
 def check_master_health(master_ip):
-    def get_node_health(master_ip):
-        response = None
-        try:
-            response = dcos.http.post("http://" + master_ip + ":5050/api/v1",json={"type":"GET_HEALTH"})
-        except DCOSException as e:
-            print("Master IP {} not accessible: ".format(master_ip))
-        return response
+    health_check_url = "http://{}:5050/api/v1".format(master_ip)
+    payload = {"type": "GET_HEALTH"}
+
+    def get_node_health():
+        return dcos.http.post(
+            health_check_url,
+            json=payload,
+            is_success=request_success
+        )
 
     def success(response):
         error_message = "Failed to parse json"
         try:
-            body = response.json()
+            response.json()
         except Exception as e:
             print(e)
             return False, error_message
@@ -213,13 +208,21 @@ def check_master_health(master_ip):
 def setup_module():
     unset_ssl_verification()
 
-#    uninstall()
-#    install()
+    uninstall()
+    install()
     check_health()
 
 
 # def teardown_module():
 #     uninstall()
+
+
+@pytest.mark.recovery
+def test_kill_task_in_node():
+    master_leader_ip = shakedown.master_leader_ip()
+    _block_on_adminrouter_new(master_leader_ip)
+    check_master_health(master_leader_ip)
+    check_health()
 
 
 @pytest.mark.recovery
