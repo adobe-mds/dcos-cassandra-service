@@ -182,12 +182,15 @@ def check_master_health(master_ip):
     health_check_url = "http://{}:5050/api/v1".format(master_ip)
     payload = {"type": "GET_HEALTH"}
 
-    def get_node_health():
-        return dcos.http.post(
-            health_check_url,
-            json=payload,
-            is_success=request_success
-        )
+    def get_node_health(master_ip):
+        response = None
+        try:
+            response = dcos.http.post(
+                health_check_url,
+                json=payload)
+        except DCOSException as e:
+            print("Master IP {} not accessible: ".format(master_ip))
+        return response
 
     def success(response):
         error_message = "Failed to parse json"
@@ -250,7 +253,7 @@ def test_scheduler_died():
 @pytest.mark.recovery
 def test_executor_killed():
     kill_task_with_pattern('cassandra.executor.Main', get_node_host())
-
+    time.sleep(5)
     check_health()
 
 
@@ -258,7 +261,7 @@ def test_executor_killed():
 def test_all_executors_killed():
     for host in shakedown.get_service_ips(PACKAGE_NAME):
         kill_task_with_pattern('cassandra.executor.Main', host)
-
+    time.sleep(5)
     check_health()
 
 
@@ -368,7 +371,7 @@ def test_config_update_then_executor_killed():
         bump_cpu_count_config,
         lambda: kill_task_with_pattern('cassandra.executor.Main', host)
     )
-
+    time.sleep(5)
     check_health()
 
 
@@ -381,7 +384,7 @@ def test_config_update_then_all_executors_killed():
             kill_task_with_pattern('cassandra.executor.Main', h) for h in hosts
         ]
     )
-
+    time.sleep(5)
     check_health()
 
 
@@ -473,7 +476,7 @@ def test_cleanup_then_executor_killed():
         run_cleanup,
         lambda: kill_task_with_pattern('cassandra.executor.Main', host)
     )
-
+    time.sleep(5)
     check_health()
 
 
@@ -486,7 +489,7 @@ def test_cleanup_then_all_executors_killed():
             kill_task_with_pattern('cassandra.executor.Main', h) for h in hosts
         ]
     )
-
+    time.sleep(5)
     check_health()
 
 
@@ -578,7 +581,7 @@ def test_repair_then_executor_killed():
         run_repair,
         lambda: kill_task_with_pattern('cassandra.executor.Main', host)
     )
-
+    time.sleep(5)
     check_health()
 
 
@@ -591,7 +594,7 @@ def test_repair_then_all_executors_killed():
             kill_task_with_pattern('cassandra.executor.Main', h) for h in hosts
         ]
     )
-
+    time.sleep(5)
     check_health()
 
 
