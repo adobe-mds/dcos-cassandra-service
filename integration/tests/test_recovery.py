@@ -216,6 +216,13 @@ def setup_module():
 
 
 @pytest.mark.recovery
+def test_code():
+    master_leader_ip = shakedown.master_leader_ip()
+    check_master_health(master_leader_ip)
+    _block_on_adminrouter_new(master_leader_ip)
+
+
+@pytest.mark.recovery
 def test_kill_task_in_node():
     kill_task_with_pattern('CassandraDaemon', get_node_host())
 
