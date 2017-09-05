@@ -43,7 +43,7 @@ public class MdsServiceManageResource {
 
     @POST
     @Path("/role/{rolename}")
-    Response addRole(@PathParam("rolename") final String rolename, RoleRequest roleRequest)
+    public Response addRole(@PathParam("rolename") final String rolename, RoleRequest roleRequest)
                     throws ConfigStoreException {
         Session session = null;
         try {
@@ -65,7 +65,7 @@ public class MdsServiceManageResource {
 
     @PUT
     @Path("/role/{rolename}")
-    Response alterRole(@PathParam("rolename") final String rolename, RoleRequest roleRequest)
+    public Response alterRole(@PathParam("rolename") final String rolename, RoleRequest roleRequest)
                     throws ConfigStoreException {
         LOGGER.info("alter role:" + rolename + " role request:" + roleRequest);
 
@@ -87,7 +87,7 @@ public class MdsServiceManageResource {
 
     @PUT
     @Path("/keyspace/{keyspace}")
-    Response alterKeyspace(@PathParam("keyspace") final String keyspace, AlterSysteAuthRequest alterSysteAuthRequest)
+    public Response alterKeyspace(@PathParam("keyspace") final String keyspace, AlterSysteAuthRequest alterSysteAuthRequest)
                     throws ConfigStoreException {
         // Only used to alter system_auth RF for each region
         if (!keyspace.equalsIgnoreCase("system_auth")) {
