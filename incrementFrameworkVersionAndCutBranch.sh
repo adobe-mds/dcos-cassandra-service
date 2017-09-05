@@ -30,7 +30,7 @@ NEW_FOLDER_NUMBER=$(expr $FOLDER_NUMBER + 1)
 setProperty "universe_folder_number" $NEW_FOLDER_NUMBER $VERSION_FILE_NAME # updating $VERSION_FILE_NAME i.e folder_number in version.txt
 
 
-git add version.txt && git commit -m "dcos cassandra framework version updated to ${FRAMEWORK_VERSION} and folder number incremented to ${NEW_FOLDER_NUMBER}" && git push origin master
+git add version.txt && git commit -m "dcos cassandra framework version updated to ${FRAMEWORK_VERSION} and folder number incremented to ${NEW_FOLDER_NUMBER}" && git push origin break-cassFrmwk-mds-rlsPrcess
 git checkout -b mds-${RELEASE_VERSION} && git push origin mds-${RELEASE_VERSION} 
 
 
