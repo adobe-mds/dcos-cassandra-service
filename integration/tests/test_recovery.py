@@ -1,6 +1,7 @@
 import dcos
 import pytest
 import shakedown
+import requests
 import time
 
 from requests.exceptions import ConnectionError
@@ -29,29 +30,23 @@ def bump_cpu_count_config():
         float(config['env']['CASSANDRA_CPUS']) + 0.1
     )
 
-    print("Bump CPU config")
-    print (marathon_api_url('apps/'+PACKAGE_NAME))
-    time.sleep(6)
-    print (config)
-    plan = dcos.http.get(cassandra_api_url('plan'), is_success=allow_incomplete_plan)
-    print(plan)
-    print(plan.json())
     response =  request(
         dcos.http.put,
         marathon_api_url('apps/' + PACKAGE_NAME),
-        json=config
+        json=config,
+        is_success=request_success
     )
     print(response)
     print(response.text)
     return response
 
 
-
 counter = 0
 def get_and_verify_plan(predicate=lambda r: True):
     global counter
+
     def fn():
-        return dcos.http.get(cassandra_api_url('plan'), is_success=allow_incomplete_plan)
+        return dcos.http.get(cassandra_api_url('plan'), is_success=request_success)
 
     def success_predicate(result):
         global counter
@@ -59,22 +54,22 @@ def get_and_verify_plan(predicate=lambda r: True):
 
         try:
             body = result.json()
-        except Exception as e:
-            print(e)
+        except Exception:
             return False, message
 
         if counter < 3:
             counter += 1
 
-        if predicate(body): counter = 0
+        if predicate(body):
+            counter = 0
 
         return predicate(body), message
 
     return spin(fn, success_predicate).json()
 
 
-def allow_incomplete_plan(status_code):
-    return 200 <= status_code < 300 or status_code == 503 or status_code == 502 or status_code == 500 or status_code == 409
+def request_success(status_code):
+    return 200 <= status_code < 300 or 500 <= status_code <= 503 or status_code == 409
 
 
 def get_node_host():
@@ -117,15 +112,16 @@ def run_cleanup():
         dcos.http.put,
         cassandra_api_url('cleanup/start'),
         json=payload,
+        is_success=request_success
     )
 
 
 def run_planned_operation(operation, failure=lambda: None):
     plan = get_and_verify_plan()
-    print("Running operation")
+    print("Running planned operation")
     operation()
     print("Verify plan after operation")
-    next_plan = get_and_verify_plan(
+    get_and_verify_plan(
         lambda p: (
             plan['phases'][1]['id'] != p['phases'][1]['id'] or
             len(plan['phases']) < len(p['phases']) or
@@ -134,8 +130,8 @@ def run_planned_operation(operation, failure=lambda: None):
     )
     print("Run failure operation")
     failure()
-    print("Verify plan after operation")
-    completed_plan = get_and_verify_plan(lambda p: p['status'] == infinity_commons.PlanState.COMPLETE.value)
+    print("Verify plan after failure")
+    get_and_verify_plan(lambda p: p['status'] == infinity_commons.PlanState.COMPLETE.value)
 
 
 def run_repair():
@@ -144,6 +140,7 @@ def run_repair():
         dcos.http.put,
         cassandra_api_url('repair/start'),
         json=payload,
+        is_success=request_success
     )
 
 
@@ -160,39 +157,49 @@ def _block_on_adminrouter():
     print("Adminrouter is up.  Master IP: {}".format(ip))
 
 
-# def check_master_health(master_ip):
-#     def get_node_health():
-#         try:
-#             response = dcos.http.get(exhibitor_api_url('cluster/state/' + master_ip))
-#         except DCOSException as e:
-#             print("Master IP {} not accessible: ".format(master_ip), e.args)
-#         return response
-#
-#     request(get_node_health, master_ip)
-#     print("Master is up again.  Master IP: {}".format(master_ip))
+def _block_on_adminrouter_new(master_ip):
+    headers = {'Authorization': "token={}".format(shakedown.dcos_acs_token())}
+    metadata_url = "http://{}/metadata".format(master_ip)
+
+    def get_metadata():
+        response = requests.get(metadata_url, headers=headers)
+        return response
+
+    def success(response):
+        error_message = "Failed to parse json"
+        try:
+            is_healthy = response.json()['PUBLIC_IPV4'] == master_ip
+            return is_healthy, "Master is not healthy yet"
+        except Exception:
+            return False, error_message
+
+    spin(get_metadata, success, 300)
+    print("Master is up again.  Master IP: {}".format(master_ip))
 
 
 def check_master_health(master_ip):
-    def get_node_health(master_ip):
+    health_check_url = "http://{}:5050/api/v1".format(master_ip)
+    payload = {"type": "GET_HEALTH"}
+
+    def get_node_health():
+        response = None
         try:
-            response = dcos.http.post("http://" + master_ip + ":5050/api/v1",json={"type":"GET_HEALTH"})
-        except DCOSException as e:
+            response = dcos.http.post(
+                health_check_url,
+                json=payload)
+        except DCOSException:
             print("Master IP {} not accessible: ".format(master_ip))
         return response
 
     def success(response):
         error_message = "Failed to parse json"
         try:
-            body = response.json()
-        except Exception as e:
-            print(e)
+            is_healthy = response.json()['get_health']['healthy']
+            return is_healthy, "Master is not healthy yet"
+        except Exception:
             return False, error_message
 
-        is_healthy = response.json()['get_health']['healthy']
-        print(is_healthy)
-        return is_healthy, "Master is not healthy yet"
-
-    spin(get_node_health, success, 600, master_ip)
+    spin(get_node_health, success, 600)
     print("Master is up again.  Master IP: {}".format(master_ip))
 
 
@@ -204,8 +211,15 @@ def setup_module():
     check_health()
 
 
-def teardown_module():
-    uninstall()
+# def teardown_module():
+#     uninstall()
+
+
+@pytest.mark.recovery
+def test_code():
+    master_leader_ip = shakedown.master_leader_ip()
+    check_master_health(master_leader_ip)
+    _block_on_adminrouter_new(master_leader_ip)
 
 
 @pytest.mark.recovery
@@ -233,7 +247,7 @@ def test_scheduler_died():
 @pytest.mark.recovery
 def test_executor_killed():
     kill_task_with_pattern('cassandra.executor.Main', get_node_host())
-
+    time.sleep(5)
     check_health()
 
 
@@ -250,9 +264,8 @@ def test_master_killed():
     master_leader_ip = shakedown.master_leader_ip()
     kill_task_with_pattern('mesos-master', master_leader_ip)
 
-    print(shakedown.get_all_master_ips())
-    check_health()
     check_master_health(master_leader_ip)
+    check_health()
 
 
 @pytest.mark.recovery
@@ -260,9 +273,8 @@ def test_zk_killed():
     master_leader_ip = shakedown.master_leader_ip()
     kill_task_with_pattern('zookeeper', master_leader_ip)
 
-    print(shakedown.get_all_master_ips())
+    _block_on_adminrouter_new(master_leader_ip)
     check_health()
-    check_master_health(master_leader_ip)
 
 
 @pytest.mark.recovery
@@ -355,7 +367,7 @@ def test_config_update_then_executor_killed():
         bump_cpu_count_config,
         lambda: kill_task_with_pattern('cassandra.executor.Main', host)
     )
-
+    time.sleep(5)
     check_health()
 
 
@@ -368,14 +380,15 @@ def test_config_update_then_all_executors_killed():
             kill_task_with_pattern('cassandra.executor.Main', h) for h in hosts
         ]
     )
-
+    time.sleep(5)
     check_health()
 
 
 @pytest.mark.recovery
 def test_config_update_then_master_killed():
+    master_leader_ip = shakedown.master_leader_ip()
     run_planned_operation(
-        bump_cpu_count_config, lambda: kill_task_with_pattern('mesos-master')
+        bump_cpu_count_config, lambda: kill_task_with_pattern('mesos-master', master_leader_ip)
     )
 
     check_health()
@@ -383,10 +396,12 @@ def test_config_update_then_master_killed():
 
 @pytest.mark.recovery
 def test_config_update_then_zk_killed():
+    master_leader_ip = shakedown.master_leader_ip()
     run_planned_operation(
-        bump_cpu_count_config, lambda: kill_task_with_pattern('zookeeper')
+        bump_cpu_count_config, lambda: kill_task_with_pattern('zookeeper', master_leader_ip)
     )
 
+    _block_on_adminrouter_new(master_leader_ip)
     check_health()
 
 
@@ -458,7 +473,7 @@ def test_cleanup_then_executor_killed():
         run_cleanup,
         lambda: kill_task_with_pattern('cassandra.executor.Main', host)
     )
-
+    time.sleep(5)
     check_health()
 
 
@@ -477,8 +492,9 @@ def test_cleanup_then_all_executors_killed():
 
 @pytest.mark.recovery
 def test_cleanup_then_master_killed():
+    master_leader_ip = shakedown.master_leader_ip()
     run_planned_operation(
-        run_cleanup, lambda: kill_task_with_pattern('mesos-master')
+        run_cleanup, lambda: kill_task_with_pattern('mesos-master', master_leader_ip)
     )
 
     check_health()
@@ -486,10 +502,12 @@ def test_cleanup_then_master_killed():
 
 @pytest.mark.recovery
 def test_cleanup_then_zk_killed():
+    master_leader_ip = shakedown.master_leader_ip()
     run_planned_operation(
-        run_cleanup, lambda: kill_task_with_pattern('zookeeper')
+        run_cleanup, lambda: kill_task_with_pattern('zookeeper', master_leader_ip)
     )
 
+    _block_on_adminrouter_new(master_leader_ip)
     check_health()
 
 
@@ -561,7 +579,7 @@ def test_repair_then_executor_killed():
         run_repair,
         lambda: kill_task_with_pattern('cassandra.executor.Main', host)
     )
-
+    time.sleep(5)
     check_health()
 
 
@@ -580,9 +598,10 @@ def test_repair_then_all_executors_killed():
 
 @pytest.mark.recovery
 def test_repair_then_master_killed():
+    master_leader_ip = shakedown.master_leader_ip()
     run_planned_operation(
         run_repair,
-        lambda: kill_task_with_pattern('mesos-master')
+        lambda: kill_task_with_pattern('mesos-master', master_leader_ip)
     )
 
     check_health()
@@ -590,11 +609,13 @@ def test_repair_then_master_killed():
 
 @pytest.mark.recovery
 def test_repair_then_zk_killed():
+    master_leader_ip = shakedown.master_leader_ip()
     run_planned_operation(
         run_repair,
-        lambda: kill_task_with_pattern('zookeeper')
+        lambda: kill_task_with_pattern('zookeeper', master_leader_ip)
     )
 
+    _block_on_adminrouter_new(master_leader_ip)
     check_health()
 
 
