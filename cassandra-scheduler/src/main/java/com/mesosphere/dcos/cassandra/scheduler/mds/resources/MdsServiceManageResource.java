@@ -125,13 +125,8 @@ public class MdsServiceManageResource {
 
     @PUT
     @Path("/keyspace/{keyspace}")
-<<<<<<< HEAD
     public Response alterKeyspace(@PathParam("keyspace") final String keyspace,
                     AlterSystemAuthRequest alterSysteAuthRequest) throws ConfigStoreException {
-=======
-    public Response alterKeyspace(@PathParam("keyspace") final String keyspace, AlterSysteAuthRequest alterSysteAuthRequest)
-                    throws ConfigStoreException {
->>>>>>> make method public
         // Only used to alter system_auth RF for each region
         if (!keyspace.equalsIgnoreCase("system_auth")) {
             return Response.status(Response.Status.BAD_REQUEST)
