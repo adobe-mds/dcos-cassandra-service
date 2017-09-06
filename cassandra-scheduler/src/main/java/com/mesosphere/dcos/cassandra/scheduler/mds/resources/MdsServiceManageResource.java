@@ -4,6 +4,7 @@ import java.net.InetSocketAddress;
 import java.util.List;
 
 import javax.inject.Inject;
+import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
@@ -25,6 +26,7 @@ import com.mesosphere.dcos.cassandra.scheduler.resources.ConnectionResource;
 
 @Path("/v1/manage")
 @Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
 public class MdsServiceManageResource {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MdsServiceManageResource.class);
@@ -56,6 +58,8 @@ public class MdsServiceManageResource {
             if (roleRequest.isGrantAllPermissions()) {
                 session.execute("GRANT ALL PERMISSIONS ON ALL KEYSPACES TO " + rolename + ";");
             }
+        }catch(Exception e){
+            Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
         } finally {
             session.close();
         }
@@ -78,6 +82,8 @@ public class MdsServiceManageResource {
             if (roleRequest.isGrantAllPermissions()) {
                 session.execute("GRANT ALL PERMISSIONS ON ALL KEYSPACES TO " + rolename + ";");
             }
+        }catch(Exception e){
+            Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
         } finally {
             session.close();
         }
@@ -98,12 +104,14 @@ public class MdsServiceManageResource {
         Session session = null;
         try {
             session = getSession(alterSysteAuthRequest.getCassandraAuth());
-            String dcRf = MdsCassandraUtills.getDcVsRFString(alterSysteAuthRequest.getDcVsRF());
+            String dcRf = MdsCassandraUtills.getDataCenterVsReplicationFactorString(alterSysteAuthRequest.getDataCenterVsReplicationFactor());
             String query = "ALTER KEYSPACE system_auth WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', " + dcRf
                             + "};";
             LOGGER.info("Alter system auth query:"+query);
 
             session.execute(query);
+        }catch(Exception e){
+            Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
         } finally {
             session.close();
         }

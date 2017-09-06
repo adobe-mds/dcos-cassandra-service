@@ -50,7 +50,7 @@ public class RoleRequest {
 
     @Override
     public String toString() {
-        return "RoleRequest [password=" + password + ", isSuperuser=" + isSuperuser + ", isLogin=" + isLogin
+        return "RoleRequest [isSuperuser=" + isSuperuser + ", isLogin=" + isLogin
                         + ", grantAllPermissions=" + grantAllPermissions + ", cassandraAuth=" + cassandraAuth + "]";
     }
 

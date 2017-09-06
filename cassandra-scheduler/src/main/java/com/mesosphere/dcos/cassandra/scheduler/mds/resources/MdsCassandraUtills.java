@@ -6,7 +6,7 @@ import org.apache.commons.lang3.StringUtils;
 
 public class MdsCassandraUtills {
 
-    public static String getDcVsRFString(Map<String, Integer> dcVsRF) {
+    public static String getDataCenterVsReplicationFactorString(Map<String, Integer> dcVsRF) {
         StringBuilder result = new StringBuilder();
 
         for (Map.Entry<String, Integer> entry : dcVsRF.entrySet()) {
