@@ -47,21 +47,17 @@ public class MdsServiceManageResource {
     @Path("/role/{rolename}")
     public Response addRole(@PathParam("rolename") final String rolename, RoleRequest roleRequest)
                     throws ConfigStoreException {
-        Session session = null;
-        try {
+        try (Session session = getSession(roleRequest.getCassandraAuth())) {
             LOGGER.info("adding role:" + rolename + " role request:" + roleRequest);
 
-            session = getSession(roleRequest.getCassandraAuth());
             session.execute("CREATE ROLE " + rolename + " WITH PASSWORD = '" + roleRequest.getPassword()
                             + "' AND SUPERUSER = " + roleRequest.isSuperuser() + " AND LOGIN = " + roleRequest.isLogin()
                             + ";");
             if (roleRequest.isGrantAllPermissions()) {
                 session.execute("GRANT ALL PERMISSIONS ON ALL KEYSPACES TO " + rolename + ";");
             }
-        }catch(Exception e){
+        } catch (Exception e) {
             Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
-        } finally {
-            session.close();
         }
         return Response.status(Response.Status.OK).entity("Successfull").build();
 
@@ -73,19 +69,15 @@ public class MdsServiceManageResource {
                     throws ConfigStoreException {
         LOGGER.info("alter role:" + rolename + " role request:" + roleRequest);
 
-        Session session = null;
-        try {
-            session = getSession(roleRequest.getCassandraAuth());
+        try (Session session = getSession(roleRequest.getCassandraAuth())) {
             session.execute("ALTER ROLE " + rolename + " WITH PASSWORD = '" + roleRequest.getPassword()
                             + "' AND SUPERUSER = " + roleRequest.isSuperuser() + " AND LOGIN = " + roleRequest.isLogin()
                             + ";");
             if (roleRequest.isGrantAllPermissions()) {
                 session.execute("GRANT ALL PERMISSIONS ON ALL KEYSPACES TO " + rolename + ";");
             }
-        }catch(Exception e){
-            Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
-        } finally {
-            session.close();
+        } catch (Exception e) {
+            return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
         }
         return Response.status(Response.Status.OK).entity("Successfull").build();
     }
@@ -93,27 +85,25 @@ public class MdsServiceManageResource {
 
     @PUT
     @Path("/keyspace/{keyspace}")
-    public Response alterKeyspace(@PathParam("keyspace") final String keyspace, AlterSysteAuthRequest alterSysteAuthRequest)
-                    throws ConfigStoreException {
+    public Response alterKeyspace(@PathParam("keyspace") final String keyspace,
+                    AlterSysteAuthRequest alterSysteAuthRequest) throws ConfigStoreException {
         // Only used to alter system_auth RF for each region
         if (!keyspace.equalsIgnoreCase("system_auth")) {
             return Response.status(Response.Status.BAD_REQUEST)
                             .entity("Only system_auth key space is supported to alter").build();
         }
 
-        Session session = null;
-        try {
-            session = getSession(alterSysteAuthRequest.getCassandraAuth());
-            String dcRf = MdsCassandraUtills.getDataCenterVsReplicationFactorString(alterSysteAuthRequest.getDataCenterVsReplicationFactor());
+        try (Session session = getSession(alterSysteAuthRequest.getCassandraAuth())) {
+            // session = getSession(alterSysteAuthRequest.getCassandraAuth());
+            String dcRf = MdsCassandraUtills.getDataCenterVsReplicationFactorString(
+                            alterSysteAuthRequest.getDataCenterVsReplicationFactor());
             String query = "ALTER KEYSPACE system_auth WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', " + dcRf
                             + "};";
-            LOGGER.info("Alter system auth query:"+query);
+            LOGGER.info("Alter system auth query:" + query);
 
             session.execute(query);
-        }catch(Exception e){
-            Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
-        } finally {
-            session.close();
+        } catch (Exception e) {
+            return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
         }
 
         return Response.status(Response.Status.OK).entity("Successfull").build();
