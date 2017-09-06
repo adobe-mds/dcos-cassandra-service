@@ -2,7 +2,7 @@ package com.mesosphere.dcos.cassandra.scheduler.mds.resources;
 
 import java.util.Map;
 
-public class AlterSysteAuthRequest {
+public class AlterSystemAuthRequest {
 
     private CassandraAuth cassandraAuth;
     private Map<String, Integer> dataCenterVsReplicationFactor;
@@ -25,7 +25,7 @@ public class AlterSysteAuthRequest {
 
     @Override
     public String toString() {
-        return "AlterSysteAuthRequest [cassandraAuth=" + cassandraAuth + ", dataCenterVsReplicationFactor="
+        return "AlterSystemAuthRequest [cassandraAuth=" + cassandraAuth + ", dataCenterVsReplicationFactor="
                         + dataCenterVsReplicationFactor + "]";
     }
 
