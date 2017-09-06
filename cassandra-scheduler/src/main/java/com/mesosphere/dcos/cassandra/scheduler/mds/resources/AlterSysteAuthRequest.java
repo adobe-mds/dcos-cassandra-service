@@ -5,8 +5,7 @@ import java.util.Map;
 public class AlterSysteAuthRequest {
 
     private CassandraAuth cassandraAuth;
-    private Map<String, Integer> dcVsRF;
-
+    private Map<String, Integer> dataCenterVsReplicationFactor;
 
     public CassandraAuth getCassandraAuth() {
         return cassandraAuth;
@@ -16,18 +15,18 @@ public class AlterSysteAuthRequest {
         this.cassandraAuth = cassandraAuth;
     }
 
-
-    public Map<String, Integer> getDcVsRF() {
-        return dcVsRF;
+    public Map<String, Integer> getDataCenterVsReplicationFactor() {
+        return dataCenterVsReplicationFactor;
     }
 
-
-    public void setDcVsRF(Map<String, Integer> dcVsRF) {
-        this.dcVsRF = dcVsRF;
+    public void setDataCenterVsReplicationFactor(Map<String, Integer> dataCenterVsReplicationFactor) {
+        this.dataCenterVsReplicationFactor = dataCenterVsReplicationFactor;
     }
 
     @Override
     public String toString() {
-        return "AlterSysteAuthRequest [cassandraAuth=" + cassandraAuth + ", dcVsRF=" + dcVsRF + "]";
+        return "AlterSysteAuthRequest [cassandraAuth=" + cassandraAuth + ", dataCenterVsReplicationFactor="
+                        + dataCenterVsReplicationFactor + "]";
     }
+
 }
