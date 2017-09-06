@@ -57,7 +57,7 @@ public class MdsServiceManageResource {
                 session.execute("GRANT ALL PERMISSIONS ON ALL KEYSPACES TO " + rolename + ";");
             }
         } catch (Exception e) {
-            Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
+            return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
         }
         return Response.status(Response.Status.OK).entity("Successfull").build();
 
