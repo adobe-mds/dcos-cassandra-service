@@ -2,6 +2,7 @@ import collections
 import json
 import time
 from functools import wraps
+import os
 
 import dcos
 import shakedown
@@ -34,7 +35,7 @@ def cassandra_api_url(basename, app_id=PACKAGE_NAME):
     return '{}/v1/{}'.format(shakedown.dcos_service_url(app_id), basename)
 
 
-def check_health(wait_time=WAIT_TIME_IN_SECONDS):
+def check_health(wait_time=WAIT_TIME_IN_SECONDS, assert_success=True):
     def fn():
         try:
             tasks = shakedown.get_service_tasks(PACKAGE_NAME)
@@ -48,11 +49,11 @@ def check_health(wait_time=WAIT_TIME_IN_SECONDS):
         print('Waiting for {} healthy tasks, got {}/{}'.format(
             DEFAULT_NODE_COUNT, len(running_tasks), len(tasks)))
         return (
-            len(running_tasks) == DEFAULT_NODE_COUNT,
+            len(running_tasks) == DEFAULT_NODE_COUNT and shakedown.service_healthy(PACKAGE_NAME),
             'Service did not become healthy'
         )
 
-    return spin(fn, success_predicate, wait_time=wait_time)
+    return spin(fn, success_predicate, wait_time=wait_time, assert_success=assert_success)
 
 
 def get_cassandra_config():
@@ -98,16 +99,16 @@ def get_cassandra_command(command):
     return stdout
 
 
-def exhibitor_api_url(path):
-    return '{}/exhibitor/exhibitor/v1/{}'.format(shakedown.dcos_url(), path)
-
-
 def marathon_api_url(basename):
     return '{}/v2/{}'.format(shakedown.dcos_service_url('marathon'), basename)
 
 
 def marathon_api_url_with_param(basename, path_param):
     return '{}/{}'.format(marathon_api_url(basename), path_param)
+
+
+def unit_health_url(unit_and_node=''):
+    return '{}/system/health/v1/units/{}'.format(shakedown.dcos_url(), unit_and_node)
 
 
 def request(request_fn, *args, **kwargs):
@@ -117,10 +118,10 @@ def request(request_fn, *args, **kwargs):
             'Request failed: %s' % response.content,
         )
 
-    return spin(request_fn, success_predicate, WAIT_TIME_IN_SECONDS, *args, **kwargs)
+    return spin(request_fn, success_predicate, WAIT_TIME_IN_SECONDS, True, *args, **kwargs)
 
 
-def spin(fn, success_predicate, wait_time=WAIT_TIME_IN_SECONDS, *args, **kwargs):
+def spin(fn, success_predicate, wait_time=WAIT_TIME_IN_SECONDS, assert_success=True, *args, **kwargs):
     now = time.time()
     end_time = now + wait_time
     while now < end_time:
@@ -134,7 +135,8 @@ def spin(fn, success_predicate, wait_time=WAIT_TIME_IN_SECONDS, *args, **kwargs)
         time.sleep(1)
         now = time.time()
 
-    assert is_successful, error_message
+    if assert_success:
+        assert is_successful, error_message
 
     return result
 
@@ -174,6 +176,12 @@ def uninstall():
 
 def unset_ssl_verification():
     shakedown.run_dcos_command('config set core.ssl_verify false')
+
+
+def read_auth_credentials():
+    username = os.environ['MDS_DCOS_USERNAME']
+    password = os.environ['MDS_DCOS_PASSWORD']
+    return username, password
 
 
 def _merge_dictionary(dict1, dict2):
