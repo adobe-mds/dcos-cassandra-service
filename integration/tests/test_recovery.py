@@ -211,7 +211,7 @@ def restart_erlang_on_host(host):
         )
 
 
-# Check if any service task is stuck or not running for more than 60 seconds. Kill executor to fix problem
+# Restart mesos agent if service is stuck or not running on some nodes
 def recover_failed_agents(hosts):
     tasks = check_health(wait_time=HEALTH_WAIT_TIME, assert_success=False)
     failed_hosts = find_failed_hosts(hosts, tasks)
