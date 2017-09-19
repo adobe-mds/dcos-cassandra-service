@@ -178,12 +178,6 @@ def unset_ssl_verification():
     shakedown.run_dcos_command('config set core.ssl_verify false')
 
 
-def read_auth_credentials():
-    username = os.environ['MDS_DCOS_USERNAME']
-    password = os.environ['MDS_DCOS_PASSWORD']
-    return username, password
-
-
 def _merge_dictionary(dict1, dict2):
     if (not isinstance(dict2, dict)):
         return dict1

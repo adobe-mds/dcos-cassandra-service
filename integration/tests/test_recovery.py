@@ -29,7 +29,6 @@ def bump_cpu_count_config(cpu_change=0.1):
     config['env']['CASSANDRA_CPUS'] = str(
         float(config['env']['CASSANDRA_CPUS']) + cpu_change
     )
-    print(config['env']['CASSANDRA_CPUS'])
     response = request(
         dcos.http.put,
         marathon_api_url('apps/' + PACKAGE_NAME),
@@ -296,7 +295,7 @@ def test_master_killed_block_on_admin_router():
     master_leader_ip = shakedown.master_leader_ip()
     kill_task_with_pattern('mesos-master', master_leader_ip)
 
-    _block_on_adminrouter(master_leader_ip)
+    verify_leader_changed(master_leader_ip)
     check_health()
 
 
