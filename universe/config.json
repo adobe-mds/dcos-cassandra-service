@@ -75,6 +75,12 @@
 					"id": "http://cassandra/docs/mesosphere.com/service/data_center_url",
 					"type": "string",
 					"description": "A comma separated list of the URLs from which this service instance retrieves data center info to form a cluster spanning multiple data centers."
+				},
+				"enable_upgrade_sstable_endpoint": {
+					"id": "http://cassandra/docs/mesosphere.com/cassandra/enableUpgradeSstableEndpoint",
+					"type": "boolean",
+					"description": "This enables end point for upgrading sstables",
+					"default": true
 				}
 			},
 			"additionalProperties": false,
