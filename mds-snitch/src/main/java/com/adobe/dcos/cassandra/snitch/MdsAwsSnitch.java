@@ -26,9 +26,9 @@ import org.slf4j.LoggerFactory;
  * A snitch that assumes an EC2 region is a DC and an EC2 availability_zone is a
  * rack. This information is available in the config for the node.
  */
-public class MdsSnitch extends AbstractNetworkTopologySnitch {
+public class MdsAwsSnitch extends AbstractNetworkTopologySnitch {
 
-	private static final Logger LOGGER = LoggerFactory.getLogger(MdsSnitch.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(MdsAwsSnitch.class);
 
 	protected static final String ZONE_NAME_QUERY_URL = "http://169.254.169.254/latest/meta-data/placement/availability-zone";
 	private static final String DEFAULT_DC = "UNKNOWN-DC";
@@ -37,7 +37,7 @@ public class MdsSnitch extends AbstractNetworkTopologySnitch {
 	protected String ec2zone;
 	protected String ec2region;
 
-	public MdsSnitch() throws IOException, ConfigurationException {
+	public MdsAwsSnitch() throws IOException, ConfigurationException {
 		String az = awsApiCall(ZONE_NAME_QUERY_URL);
 		// Split "us-east-1a"  into "us-east-1" , "a" .
 		ec2zone = "" + az.charAt(az.length() - 1);
