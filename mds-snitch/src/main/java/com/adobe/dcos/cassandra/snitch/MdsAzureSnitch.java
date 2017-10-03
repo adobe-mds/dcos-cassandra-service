@@ -41,12 +41,13 @@ public class MdsAzureSnitch extends AbstractNetworkTopologySnitch {
     private Map<InetAddress, Map<String, String>> savedEndpoints;
     protected String faultDomain;
     protected String azureRegion;
-
+    private final String CLOUD_PROVIDER_PREFIX = "AZURE-";
+    
     public MdsAzureSnitch() throws IOException, ConfigurationException {
         String apiResult;
         apiResult = azureApiCall(REGION_NAME_QUERY_URL);
         LOGGER.info("Azure Metadata API Region {}", apiResult);
-        azureRegion = apiResult;
+		azureRegion = CLOUD_PROVIDER_PREFIX + apiResult;
         apiResult = azureApiCall(FAULTDOMAIN_NAME_QUERY_URL);
         LOGGER.info("Azure Metadata API FaultDomain {}", apiResult);
         faultDomain = apiResult;

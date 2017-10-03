@@ -36,12 +36,13 @@ public class MdsAwsSnitch extends AbstractNetworkTopologySnitch {
 	private Map<InetAddress, Map<String, String>> savedEndpoints;
 	protected String ec2zone;
 	protected String ec2region;
-
+	private final String CLOUD_PROVIDER_PREFIX = "AWS-"; 
+	
 	public MdsAwsSnitch() throws IOException, ConfigurationException {
 		String az = awsApiCall(ZONE_NAME_QUERY_URL);
 		// Split "us-east-1a"  into "us-east-1" , "a" .
 		ec2zone = "" + az.charAt(az.length() - 1);
-		ec2region = az.substring(0, az.length() - 1);
+		ec2region = CLOUD_PROVIDER_PREFIX + az.substring(0, az.length() - 1);
 		String datacenterSuffix = (new SnitchProperties()).get("dc_suffix", "");
 		ec2region = ec2region.concat(datacenterSuffix);
 		LOGGER.info("EC2Snitch using region: {}, zone: {}.", ec2region, ec2zone);
