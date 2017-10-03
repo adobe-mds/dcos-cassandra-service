@@ -23,6 +23,8 @@ message Location{
     optional string rack = 1;
 
     optional string dataCenter = 2;
+    
+    optional string dcSuffix = 3;
 }
 
 message CassandraConfig{

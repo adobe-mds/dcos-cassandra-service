@@ -28,6 +28,7 @@ cassandra:
   location:
     rack : ${CASSANDRA_LOCATION_RACK:-"rac1"}
     data_center : ${CASSANDRA_LOCATION_DATA_CENTER:-"dc1"}
+    dc_suffix : ${CASSANDRA_LOCATION_DATA_CENTER_SUFFIX:-""}
   jmx_port: ${CASSANDRA_JMX_PORT:-7199}
   publish_discovery_info: ${CASSANDRA_PUBLISH_DISCOVERY_INFO:-false}
   application:

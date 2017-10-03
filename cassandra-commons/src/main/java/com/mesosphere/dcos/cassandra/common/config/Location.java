@@ -39,28 +39,30 @@ public class Location {
     public static final String DEFAULT_FILE = "cassandra-rackdc.properties";
 
     /**
-     * The default location of a Cassandra node (rac1, dc1).
+     * The default location of a Cassandra node (rac1, dc1, "").
      */
-    public static final Location DEFAULT = Location.create("rac1", "dc1");
+	public static final Location DEFAULT = Location.create("rac1", "dc1", "");
 
     @JsonProperty("rack")
     private final String rack;
     @JsonProperty("data_center")
     private final String dataCenter;
+	@JsonProperty("dc_suffix")
+	private final String dcSuffix;
 
     /**
      * Creates a new Location.
      *
      * @param rack       The rack for the Cassandra node.
      * @param dataCenter The data center for the Cassandra node.
+     * @param dcSuffix The data center suffix for the Cassandra node.
      * @return A Location constructed from the parameters.
      */
-    @JsonCreator
-    public static Location create(
-            @JsonProperty("rack") final String rack,
-            @JsonProperty("data_center") final String dataCenter) {
-        return new Location(rack, dataCenter);
-    }
+	@JsonCreator
+	public static Location create(@JsonProperty("rack") final String rack,
+			@JsonProperty("data_center") final String dataCenter, @JsonProperty("dc_suffix") final String dcSuffix) {
+		return new Location(rack, dataCenter, dcSuffix);
+	}
 
     /**
      * Parses a Location from a Protocol Buffers representation.
@@ -69,7 +71,7 @@ public class Location {
      * @return A Location parsed from the Protocol Buffers representation.
      */
     public static Location parse(CassandraProtos.Location location) {
-        return create(location.getRack(), location.getDataCenter());
+		return create(location.getRack(), location.getDataCenter(), location.getDcSuffix());
     }
 
     /**
@@ -92,9 +94,10 @@ public class Location {
      * @param rack       The rack for the Cassandra node.
      * @param dataCenter The data center for the Cassandra node.
      */
-    public Location(final String rack, final String dataCenter) {
+    public Location(final String rack, final String dataCenter, final String dcSuffix) {
         this.rack = rack;
         this.dataCenter = dataCenter;
+		this.dcSuffix = dcSuffix;
     }
 
     /**
@@ -114,8 +117,12 @@ public class Location {
     public String getRack() {
         return rack;
     }
+    
+    public String getDcSuffix() {
+		return dcSuffix;
+	}
 
-    /**
+	/**
      * Writes the Location as a Properties file.
      *
      * @param path The Path indicating where the Location will be written.
@@ -126,6 +133,7 @@ public class Location {
         PrintWriter writer = new PrintWriter(path.toString(), "UTF-8");
         writer.println("dc=" + dataCenter);
         writer.println("rack=" + rack);
+        writer.println("dc_suffix=" + dcSuffix);
         writer.close();
     }
 
@@ -139,6 +147,7 @@ public class Location {
         return CassandraProtos.Location.newBuilder()
                 .setRack(rack)
                 .setDataCenter(dataCenter)
+                .setDcSuffix(dcSuffix)
                 .build();
     }
 
@@ -162,6 +171,10 @@ public class Location {
 
         if (rack != null ? !rack.equals(location.rack) : location.rack != null)
             return false;
+        
+		if (dcSuffix != null ? !dcSuffix.equals(location.dcSuffix) : location.dcSuffix != null)
+			return false;
+        
         return dataCenter != null ? dataCenter.equals(location.dataCenter) :
                 location.dataCenter == null;
 
@@ -171,6 +184,7 @@ public class Location {
     public int hashCode() {
         int result = rack != null ? rack.hashCode() : 0;
         result = 31 * result + (dataCenter != null ? dataCenter.hashCode() : 0);
+		result = 31 * result + (dcSuffix != null ? dcSuffix.hashCode() : 0);
         return result;
     }
 

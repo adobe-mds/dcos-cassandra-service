@@ -66,6 +66,12 @@
 					"description": "The data center that the Cassandra cluster managed by the service is deployed in.",
 					"default" : "dc1"
 				},
+				"dc_suffix": {
+					"id": "http://cassandra/docs/mesosphere.com/service/dc_suffix",
+					"type": "string",
+					"description": "The data center suffix that the Cassandra cluster managed by the service is deployed in.",
+					"default" : ""
+				},
 				"data_center_url": {
 					"id": "http://cassandra/docs/mesosphere.com/service/data_center_url",
 					"type": "string",
