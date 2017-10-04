@@ -108,6 +108,8 @@ public class CassandraDaemonTaskTest {
                 7199,
                 false,
                 UUID.randomUUID().toString(),
+                true,
+                true,
                 CassandraApplicationConfig.builder().build());
 
         CassandraDaemonTask updatedTask = daemonTask.updateConfig(
@@ -140,6 +142,8 @@ public class CassandraDaemonTaskTest {
                 7199,
                 false,
                 UUID.randomUUID().toString(),
+                true,
+                true,
                 CassandraApplicationConfig.builder().build());
 
         CassandraDaemonTask updatedTask = daemonTask.updateConfig(
@@ -173,6 +177,8 @@ public class CassandraDaemonTaskTest {
                 7199,
                 false,
                 UUID.randomUUID().toString(),
+                true,
+                true,
                 CassandraApplicationConfig.builder().build());
 
         CassandraDaemonTask updatedTask = daemonTask.updateConfig(

@@ -29,6 +29,8 @@ cassandra:
     data_center : ${CASSANDRA_LOCATION_DATA_CENTER:-"dc1"}
     dc_suffix : ${CASSANDRA_LOCATION_DATA_CENTER_SUFFIX:-""}
   jmx_port: ${CASSANDRA_JMX_PORT:-7199}
+  enable_check_data_center : ${ENABLE_CHECK_DATA_CENTER:-true}
+  enable_check_rack : ${ENABLE_CHECK_RACK:-true}
   publish_discovery_info: ${CASSANDRA_PUBLISH_DISCOVERY_INFO:-false}
   rolling_restart_name: ${CASSANDRA_ROLLING_RESTART_NAME:-"00000000-0000-0000-0000-000000000000"}
   application:

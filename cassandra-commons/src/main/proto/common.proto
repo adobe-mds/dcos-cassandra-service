@@ -54,6 +54,10 @@ message CassandraConfig{
     optional bool publishDiscoveryInfo = 12;
 
     optional string rollingRestartName = 13;
+    
+    optional bool enableCheckDataCenter = 14;
+    
+    optional bool enableCheckRack = 15;
 }
 
 message CassandraData{

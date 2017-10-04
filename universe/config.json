@@ -219,6 +219,18 @@
 					"description": "The JMX port that will be used to interface with the Cassandra application.",
 					"default": 7199
 				},
+				"enable_check_data_center": {
+					"id": "http://cassandra/docs/mesosphere.com/cassandra/enableCheckDataCenter",
+					"type": "boolean",
+					"description": "This enables if data center change check during cassandra daemon start",
+					"default": true
+				},
+				"enable_check_rack": {
+					"id": "http://cassandra/docs/mesosphere.com/cassandra/enableCheckRack",
+					"type": "boolean",
+					"description": "This enables if rack change check during cassandra daemon start",
+					"default": true
+				},
 				"num_tokens": {
 					"id": "http://cassandra/docs/mesosphere.com/cassandra/numTokens",
 					"type": "integer",

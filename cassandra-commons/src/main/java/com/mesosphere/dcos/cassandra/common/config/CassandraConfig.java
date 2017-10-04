@@ -47,6 +47,8 @@ public class CassandraConfig {
                     7199,
                     false,
                     UUID.randomUUID().toString(),
+                    true,
+                    true,
                     CassandraApplicationConfig.builder().build());
 
 
@@ -68,6 +70,8 @@ public class CassandraConfig {
         private boolean publishDiscoveryInfo;
         private String rollingRestartName;
         private CassandraApplicationConfig application;
+    	public boolean enableCheckDataCenter;
+    	public boolean enableCheckRack;
 
         /**
          * Constructs a new Builder by copying the properties of config.
@@ -88,6 +92,8 @@ public class CassandraConfig {
             this.publishDiscoveryInfo = config.publishDiscoveryInfo;
             this.rollingRestartName = config.rollingRestartName;
             this.application = config.application;
+        	this.enableCheckDataCenter = config.enableCheckDataCenter;
+			this.enableCheckRack = config.enableCheckRack;
         }
 
         /**
@@ -324,7 +330,25 @@ public class CassandraConfig {
             return this;
         }
 
-        /**
+        public boolean isEnableCheckDataCenter() {
+			return enableCheckDataCenter;
+		}
+
+		public Builder setEnableCheckDataCenter(boolean enableCheckDataCenter) {
+			this.enableCheckDataCenter = enableCheckDataCenter;
+			return this;
+		}
+
+		public boolean isEnableCheckRack() {
+			return enableCheckRack;
+		}
+
+		public Builder setEnableCheckRack(boolean enableCheckRack) {
+			this.enableCheckRack = enableCheckRack;
+			return this;
+		}
+
+		/**
          * Creates a CassandraConfig with the properties of the Builder.
          * @return A
          */
@@ -342,6 +366,8 @@ public class CassandraConfig {
                     jmxPort,
                     publishDiscoveryInfo,
                     rollingRestartName,
+                    enableCheckDataCenter,
+                    enableCheckRack,
                     application);
         }
     }
@@ -387,6 +413,8 @@ public class CassandraConfig {
             @JsonProperty("jmx_port") int jmxPort,
             @JsonProperty("publish_discovery_info") boolean publishDiscoveryInfo,
             @JsonProperty("rolling_restart_name") String rollingRestartName,
+            @JsonProperty("enable_check_data_center") boolean enableCheckDataCenter,
+            @JsonProperty("enable_check_rack") boolean enableCheckRack,
             @JsonProperty("application")
             CassandraApplicationConfig application) {
 
@@ -402,6 +430,8 @@ public class CassandraConfig {
                 jmxPort,
                 publishDiscoveryInfo,
                 rollingRestartName,
+                enableCheckDataCenter,
+                enableCheckRack,
                 application);
     }
 
@@ -427,6 +457,8 @@ public class CassandraConfig {
                 config.getJmxPort(),
                 config.getPublishDiscoveryInfo(),
                 config.getRollingRestartName(),
+                config.getEnableCheckDataCenter(),
+                config.getEnableCheckRack(),
                 CassandraApplicationConfig.parse(config.getApplication()));
 
     }
@@ -479,8 +511,23 @@ public class CassandraConfig {
 
     @JsonProperty("rolling_restart_name")
     public String rollingRestartName;
+    
+    @JsonProperty("enable_check_data_center")
+	public boolean enableCheckDataCenter;
+	
+    @JsonProperty("enable_check_rack")
+	public boolean enableCheckRack;
+	
+    
+    public boolean isEnableCheckDataCenter() {
+		return enableCheckDataCenter;
+	}
 
-    /**
+	public boolean isEnableCheckRack() {
+		return enableCheckRack;
+	}
+	
+	/**
      * Constructs a CassandraConfig
      * @param version The Cassanra version of the node.
      * @param cpus The cpu shares allocated to the node.
@@ -508,6 +555,8 @@ public class CassandraConfig {
                            final int jmxPort,
                            final boolean publishDiscoveryInfo,
                            final String rollingRestartName,
+                           final boolean enableCheckDataCenter,
+                           final boolean enableCheckRack,
                            final CassandraApplicationConfig application) {
         this.version = version;
         this.cpus = cpus;
@@ -521,6 +570,8 @@ public class CassandraConfig {
         this.publishDiscoveryInfo = publishDiscoveryInfo;
         this.rollingRestartName = (rollingRestartName != null) ? rollingRestartName : "";
         this.application = application;
+        this.enableCheckDataCenter = enableCheckDataCenter;
+        this.enableCheckRack = enableCheckRack;
     }
 
     /**
@@ -642,6 +693,8 @@ public class CassandraConfig {
                         .setLocation(location.toProto())
                         .setPublishDiscoveryInfo(publishDiscoveryInfo)
                         .setRollingRestartName(rollingRestartName)
+                        .setEnableCheckDataCenter(enableCheckDataCenter)
+                        .setEnableCheckRack(enableCheckRack)
                         .setApplication(application.toByteString());
 
         return builder.build();
@@ -683,15 +736,16 @@ public class CassandraConfig {
                 Objects.equals(getReplaceIp(), that.getReplaceIp()) &&
                 Objects.equals(getHeap(), that.getHeap()) &&
                 Objects.equals(getLocation(), that.getLocation()) &&
+                Objects.equals(isEnableCheckDataCenter(), that.isEnableCheckDataCenter()) &&
+                Objects.equals(isEnableCheckRack(), that.isEnableCheckRack()) &&
                 Objects.equals(getApplication(), that.getApplication());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getVersion(), getCpus(), getMemoryMb(), getDiskMb(),
-                getDiskType(),
-                getReplaceIp(), getHeap(), getLocation(), getJmxPort(), getPublishDiscoveryInfo(),
-                getRollingRestartName(), getApplication());
+		return Objects.hash(getVersion(), getCpus(), getMemoryMb(), getDiskMb(), getDiskType(), getReplaceIp(),
+				getHeap(), getLocation(), getJmxPort(), getPublishDiscoveryInfo(), getRollingRestartName(),
+				getApplication(), isEnableCheckDataCenter(), isEnableCheckRack());
     }
 
     @Override
