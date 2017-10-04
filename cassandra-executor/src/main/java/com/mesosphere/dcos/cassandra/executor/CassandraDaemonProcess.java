@@ -199,11 +199,22 @@ public class CassandraDaemonProcess extends ProcessTask {
         }
     }
 
+	private static String ignoreDataCenter() {
+		LOGGER.info("Ignoring checkDatacenter data center startup check");
+		return "-Dcassandra.ignore_dc=true";
+	}
+	
+	private static String ignoreRack() {
+		LOGGER.info("Ignoring checkRack startup check");
+		return "-Dcassandra.ignore_rack=true";
+	}
+	
     private static ProcessBuilder createDaemon(CassandraPaths cassandraPaths, CassandraDaemonTask cassandraDaemonTask,
                     boolean metricsEnabled) throws UnknownHostException {
 
         final ProcessBuilder builder =
-                        new ProcessBuilder(cassandraPaths.cassandraRun().toString(), getReplaceIp(cassandraDaemonTask),
+				new ProcessBuilder(cassandraPaths.cassandraRun().toString(), getReplaceIp(cassandraDaemonTask),
+						ignoreDataCenter(), ignoreRack(),
                                         "-f").inheritIO().directory(new File(System.getProperty("user.dir")));
         builder.environment().put("JMX_PORT", Integer.toString(cassandraDaemonTask.getConfig().getJmxPort()));
         if (metricsEnabled) {
