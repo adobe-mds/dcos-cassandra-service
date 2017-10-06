@@ -27,9 +27,9 @@ git diff-index --quiet HEAD || (git commit -m "framework file for cassandra adde
 
 
 #updating main branch
-git checkout version-3.x
-git pull --rebase origin $UNIVERSE_BRANCH
-git push origin version-3.x
+#git checkout version-3.x
+#git pull --rebase origin $UNIVERSE_BRANCH
+#git push origin version-3.x
 
 
 
