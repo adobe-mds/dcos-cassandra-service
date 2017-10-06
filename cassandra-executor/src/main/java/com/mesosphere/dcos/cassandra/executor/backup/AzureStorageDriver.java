@@ -4,13 +4,9 @@ import static com.mesosphere.dcos.cassandra.executor.backup.azure.PageBlobOutput
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.URISyntaxException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -24,16 +20,13 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.xerial.snappy.SnappyInputStream;
-import org.xerial.snappy.SnappyOutputStream;
 
 import com.mesosphere.dcos.cassandra.common.tasks.backup.BackupRestoreContext;
-import com.mesosphere.dcos.cassandra.executor.backup.azure.PageBlobInputStream;
-import com.mesosphere.dcos.cassandra.executor.backup.azure.PageBlobOutputStream;
 import com.microsoft.azure.storage.CloudStorageAccount;
 import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.CloudBlobClient;
 import com.microsoft.azure.storage.blob.CloudBlobContainer;
+import com.microsoft.azure.storage.blob.CloudBlockBlob;
 import com.microsoft.azure.storage.blob.CloudPageBlob;
 import com.microsoft.azure.storage.blob.ListBlobItem;
 
@@ -46,9 +39,6 @@ import com.microsoft.azure.storage.blob.ListBlobItem;
 public class AzureStorageDriver implements BackupStorageDriver {
 
   private static final Logger logger = LoggerFactory.getLogger(AzureStorageDriver.class);
-
-  private static final int DEFAULT_PART_SIZE_UPLOAD = 4 * 1024 * 1024; // Chunk size set to 4MB
-  private static final int DEFAULT_PART_SIZE_DOWNLOAD = 4 * 1024 * 1024; // Chunk size set to 4MB
 
   @Override
   public void upload(final BackupRestoreContext ctx) throws Exception {
@@ -143,23 +133,16 @@ public class AzureStorageDriver implements BackupStorageDriver {
 
   private void uploadFile(final CloudBlobContainer container, final String fileKey, final File sourceFile) throws Exception{
 
-    PageBlobOutputStream pageBlobOutputStream = null;
-    SnappyOutputStream compress = null;
-    BufferedOutputStream bufferedOutputStream = null;
-    try (BufferedInputStream inputStream = new BufferedInputStream(new FileInputStream(sourceFile))) {
+    try {
 
       logger.info("Initiating upload for file: {} | key: {}",
         sourceFile.getAbsolutePath(), fileKey);
 
-      final CloudPageBlob blob = container.getPageBlobReference(fileKey);
-      pageBlobOutputStream = new PageBlobOutputStream(blob);
-      bufferedOutputStream = new BufferedOutputStream(pageBlobOutputStream);
+      final CloudBlockBlob blob = container.getBlockBlobReference(fileKey);
+      blob.uploadFromFile(sourceFile.getAbsolutePath());
 
-      logger.info("Creating Snappy output stream");
-      compress = new SnappyOutputStream(bufferedOutputStream, DEFAULT_PART_SIZE_UPLOAD);
-      logger.info("Streams initialized. Starting upload");
-      IOUtils.copy(inputStream, compress, DEFAULT_PART_SIZE_UPLOAD);
       logger.info("Upload Complete");
+
     } catch (StorageException | URISyntaxException | IOException e) {
       logger.error("Unable to store blob", e);
     } catch (final Exception e)
@@ -167,27 +150,14 @@ public class AzureStorageDriver implements BackupStorageDriver {
         logger.error("Exception during Upload", e);
         throw e;
     }
-    finally {
-      IOUtils.closeQuietly(compress);  // super important that the compress close is called first in order to flush
-      IOUtils.closeQuietly(bufferedOutputStream);
-      IOUtils.closeQuietly(pageBlobOutputStream);
-    }
   }
-  private void uploadStream(final CloudBlobContainer container, final String fileKey, final BufferedInputStream sourceStream) throws Exception{
+  private void uploadText(final CloudBlobContainer container, final String fileKey, final String textToUpload) throws Exception{
 
-    PageBlobOutputStream pageBlobOutputStream = null;
-    SnappyOutputStream compress = null;
-    BufferedOutputStream bufferedOutputStream = null;
-    try (BufferedInputStream inputStream = sourceStream) {
+  try
+  {  logger.info("Initiating upload for destination file: {}",fileKey);
 
-      final CloudPageBlob blob = container.getPageBlobReference(fileKey);
-      pageBlobOutputStream = new PageBlobOutputStream(blob);
-      bufferedOutputStream = new BufferedOutputStream(pageBlobOutputStream);
-
-        logger.info("Creating Snappy output stream");
-        compress = new SnappyOutputStream(bufferedOutputStream, DEFAULT_PART_SIZE_UPLOAD);
-      logger.info("Streams initialized. Starting upload");
-      IOUtils.copy(inputStream, compress, DEFAULT_PART_SIZE_UPLOAD);
+    final CloudBlockBlob blob = container.getBlockBlobReference(fileKey);
+      blob.uploadText(textToUpload);
       logger.info("Upload Complete");
 
     } catch (StorageException | URISyntaxException | IOException e) {
@@ -197,11 +167,6 @@ public class AzureStorageDriver implements BackupStorageDriver {
     {
         logger.error("Exception during Upload", e);
         throw e;
-    }
-    finally {
-      IOUtils.closeQuietly(compress);  // super important that the compress close is called first in order to flush
-      IOUtils.closeQuietly(bufferedOutputStream);
-      IOUtils.closeQuietly(pageBlobOutputStream);
     }
   }
   @Override
@@ -223,7 +188,7 @@ public class AzureStorageDriver implements BackupStorageDriver {
               ctx.getExternalLocation(), containerName);
     }
       final String fileKey = key + "/schema.cql";
-      uploadStream(container, fileKey,inputStream);
+      uploadText(container, fileKey,schema);
       return;
 
 
@@ -257,8 +222,8 @@ public class AzureStorageDriver implements BackupStorageDriver {
     }
   }
 
-  private void downloadFile(
-                  final String localLocation, final CloudBlobContainer container, final String fileKey, final long originalSize) {
+  private void downloadFile(final String localLocation, final CloudBlobContainer container, final String fileKey,
+                  final long originalSize) {
 
     logger.info("Downloading |  Local location {} | fileKey: {} | Size: {}", localLocation, fileKey, originalSize);
 
@@ -269,32 +234,21 @@ public class AzureStorageDriver implements BackupStorageDriver {
       logger.error("Unable to create parent directories!");
       return;
     }
+    try (FileOutputStream fileOutputStream = new FileOutputStream(file, true);
+                    BufferedOutputStream bos = new BufferedOutputStream(fileOutputStream)) {
+      final CloudBlockBlob blockBlob = container.getBlockBlobReference(fileKey);
 
-    InputStream inputStream = null;
-
-    SnappyInputStream compress = null;
-
-    try (
-      FileOutputStream fileOutputStream = new FileOutputStream(file, true);
-      BufferedOutputStream bos = new BufferedOutputStream(fileOutputStream)) {
-
-      final CloudPageBlob pageBlobReference = container.getPageBlobReference(fileKey);
-      inputStream = new PageBlobInputStream(pageBlobReference);
-      compress = new SnappyInputStream(inputStream);
-
-      IOUtils.copy(compress, bos, DEFAULT_PART_SIZE_DOWNLOAD);
+      blockBlob.download(bos);
 
     } catch (final Exception e) {
       logger.error("Unable to write file: {}", fileKey, e);
-    } finally {
-      IOUtils.closeQuietly(compress);
-      IOUtils.closeQuietly(inputStream);
     }
   }
 
   @Override
-  public String downloadSchema(final BackupRestoreContext ctx) throws Exception { // Path: <backupname/node-id/schema.cql>
-    String schema="";
+  public String downloadSchema(final BackupRestoreContext ctx)
+                  throws Exception { // Path: <backupname/node-id/schema.cql>
+    String schema = "";
     final String accountName = ctx.getAccountId();
     final String accountKey = ctx.getSecretKey();
     final String backupName = ctx.getName();
@@ -305,31 +259,17 @@ public class AzureStorageDriver implements BackupStorageDriver {
     // https://<account_name>.blob.core.windows.net/<container_name>
     final CloudBlobContainer container = getCloudBlobContainer(accountName, accountKey, containerName);
     if (container == null) {
-      logger.error("Error downloading schema.  Unable to connect to {}, for container {}.",
-              ctx.getExternalLocation(), containerName);
+      logger.error("Error downloading schema.  Unable to connect to {}, for container {}.", ctx.getExternalLocation(),
+                      containerName);
       return schema;
     }
     final String fileKey = key + "/schema.cql";
-    final CloudPageBlob pageBlobReference = container.getPageBlobReference(fileKey);
-    if(!pageBlobReference.exists()){
-      logger.error("Error downloading schema.  Unable to find schema on container {}",
-              containerName);
-      return schema;
-    }
-    InputStream inputStream = null;
-    SnappyInputStream compress = null;
-    try
-    {
-      inputStream = new PageBlobInputStream(pageBlobReference);
-      compress = new SnappyInputStream(inputStream);
-      final OutputStream outputStream = new ByteArrayOutputStream();
-      IOUtils.copy(compress,outputStream);
-      schema = outputStream.toString();
-  } catch (final Exception e) {
-    logger.error("Unable to download schema : {}", fileKey, e);
-  } finally {
-      IOUtils.closeQuietly(compress);
-      IOUtils.closeQuietly(inputStream);
+    try {
+      final CloudBlockBlob blockBlob = container.getBlockBlobReference(fileKey);
+      schema = blockBlob.downloadText();
+
+    } catch (final Exception e) {
+      logger.error("Unable to download schema : {}", fileKey, e);
     }
     return schema;
   }
@@ -380,6 +320,11 @@ public class AzureStorageDriver implements BackupStorageDriver {
         if (item instanceof CloudPageBlob) {
           final CloudPageBlob cloudBlob = (CloudPageBlob) item;
           snapshotFiles.put(cloudBlob.getName(), getOriginalFileSize(cloudBlob));
+        }
+        if(item instanceof CloudBlockBlob)
+        {
+          final CloudBlockBlob cloudBlob = (CloudBlockBlob) item;
+          snapshotFiles.put(cloudBlob.getName(), cloudBlob.getProperties().getLength());
         }
       }
     } catch (final StorageException e) {
