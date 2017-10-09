@@ -66,6 +66,12 @@
 					"description": "The data center that the Cassandra cluster managed by the service is deployed in.",
 					"default" : "dc1"
 				},
+				"vhost": {
+					"id": "http://cassandra/docs/mesosphere.com/service/vhost",
+					"type": "string",
+					"description": "Virtual host of service , ex public slave LB",
+					"default" : ""
+				},
 				"dc_suffix": {
 					"id": "http://cassandra/docs/mesosphere.com/service/dc_suffix",
 					"type": "string",
