@@ -51,7 +51,7 @@
   "DCOS_SERVICE_SCHEME": "http",
   "HAPROXY_0_HTTP_BACKEND_PROXYPASS_PATH": "/{{service.name}}",
   "HAPROXY_0_PATH": "/{{service.name}}/v1/datacenter",
-  "HAPROXY_0_VHOST": "{{service.vhost}}"
+  "HAPROXY_0_VHOST": "{{{service.vhost}}}"
 },
 "upgradeStrategy":{
   "minimumHealthCapacity": 0,
