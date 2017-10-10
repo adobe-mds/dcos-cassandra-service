@@ -1,4 +1,4 @@
-package com.adobe.mds.cassandra.cassandraconnection.response;
+package com.mesosphere.dcos.cassandra.scheduler.mds.resources;
 
 import java.io.Serializable;
 
