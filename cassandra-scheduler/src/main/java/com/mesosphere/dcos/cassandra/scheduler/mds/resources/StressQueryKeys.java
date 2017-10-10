@@ -1,4 +1,4 @@
-package com.adobe.mds.cassandra.cassandraconnection.request;
+package com.mesosphere.dcos.cassandra.scheduler.mds.resources;
 
 import java.util.List;
 
