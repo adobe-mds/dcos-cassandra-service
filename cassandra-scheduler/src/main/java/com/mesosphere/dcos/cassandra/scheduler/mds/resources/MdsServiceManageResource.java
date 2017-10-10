@@ -20,7 +20,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.ConsistencyLevel;
+import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
+import com.datastax.driver.core.SimpleStatement;
+import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.exceptions.NoHostAvailableException;
 import com.datastax.driver.core.exceptions.QueryExecutionException;
 import com.datastax.driver.core.exceptions.QueryValidationException;
@@ -55,10 +59,11 @@ public class MdsServiceManageResource {
         try (Session session = MdsCassandraUtills.getSession(roleRequest.getCassandraAuth(), capabilities, state,
                         configurationManager)) {
             LOGGER.info("adding role:" + rolename + " role request:" + roleRequest);
-
-            session.execute("CREATE ROLE " + rolename + " WITH PASSWORD = '" + roleRequest.getPassword()
-                            + "' AND SUPERUSER = " + roleRequest.isSuperuser() + " AND LOGIN = " + roleRequest.isLogin()
-                            + ";");
+            
+			Statement statement = new SimpleStatement("CREATE ROLE " + rolename + " WITH PASSWORD = '" + roleRequest.getPassword()
+					+ "' AND SUPERUSER = " + roleRequest.isSuperuser() + " AND LOGIN = " + roleRequest.isLogin() + ";")
+							.setConsistencyLevel(ConsistencyLevel.ALL);
+			session.execute(statement);
 
             if (roleRequest.isGrantAllPermissions()) {
                 grantPermission(rolename, session);
@@ -108,7 +113,11 @@ public class MdsServiceManageResource {
         int count = 1;
         while (true) {
             try {
-                session.execute("GRANT ALL PERMISSIONS ON ALL KEYSPACES TO " + rolename + ";");
+            	
+				Statement statement = new SimpleStatement(
+						"GRANT ALL PERMISSIONS ON ALL KEYSPACES TO " + rolename + ";")
+								.setConsistencyLevel(ConsistencyLevel.ALL);
+				session.execute(statement);
                 return;
             } catch (Exception e) {
                 LOGGER.error("failed to grant permission , it because role is not populated");
