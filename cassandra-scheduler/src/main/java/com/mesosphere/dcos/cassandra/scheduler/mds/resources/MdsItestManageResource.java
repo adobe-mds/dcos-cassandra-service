@@ -137,7 +137,7 @@ public class MdsItestManageResource {
 		return Response.status(Response.Status.OK).entity("Successfull").build();
 	}
 
-	@PUT
+	@POST
 	@Path("/setkey/{key}/{value}")
 	public Response setKey(@PathParam("key") final String key, @PathParam("value") final String value,
 	        CassandraAuth cassandraAuth) {
@@ -158,7 +158,7 @@ public class MdsItestManageResource {
 		return Response.status(Response.Status.OK).entity("Successfull").build();
 	}
 
-	@GET
+	@POST
 	@Path("/getkey/{key}")
 	public String getKey(@PathParam("key") final String key, CassandraAuth cassandraAuth) {
 		try (Session session = MdsCassandraUtills.getSession(cassandraAuth, capabilities, state,
@@ -183,7 +183,7 @@ public class MdsItestManageResource {
 		}
 	}
 
-	@GET
+	@POST
 	@Path("/stress/{keyspace}/{table}/{rowlimit}")
 	public CassandraCollectionData getStressData(@PathParam("keyspace") final String keyspace,
 	        @PathParam("table") final String table, @PathParam("rowlimit") Integer rowlimit,
