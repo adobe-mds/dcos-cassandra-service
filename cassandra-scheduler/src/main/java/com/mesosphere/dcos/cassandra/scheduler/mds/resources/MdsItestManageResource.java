@@ -143,7 +143,6 @@ public class MdsItestManageResource {
 	        CassandraAuth cassandraAuth) {
 		try (Session session = MdsCassandraUtills.getSession(cassandraAuth, capabilities, state,
 		        configurationManager)) {
-			PreparedStatement ps = session.prepare("insert into pairs (key, value) values (?, ?)");
 			PreparedStatement ps = session.prepare("insert into dcos.pairs (key, value) values (?, ?)");
 			BoundStatement boundStatement = ps.bind(key, value);
 			session.execute(boundStatement);
