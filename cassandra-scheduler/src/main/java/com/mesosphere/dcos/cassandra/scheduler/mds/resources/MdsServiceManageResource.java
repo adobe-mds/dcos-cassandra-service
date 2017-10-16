@@ -89,9 +89,12 @@ public class MdsServiceManageResource {
 
         try (Session session = MdsCassandraUtills.getSession(roleRequest.getCassandraAuth(), capabilities, state,
                         configurationManager)) {
-            session.execute("ALTER ROLE " + rolename + " WITH PASSWORD = '" + roleRequest.getPassword()
+        	
+        	Statement statement = new SimpleStatement("ALTER ROLE " + rolename + " WITH PASSWORD = '" + roleRequest.getPassword()
                             + "' AND SUPERUSER = " + roleRequest.isSuperuser() + " AND LOGIN = " + roleRequest.isLogin()
-                            + ";");
+                            + ";").setConsistencyLevel(ConsistencyLevel.ALL);
+        	
+            session.execute(statement);
             if (roleRequest.isGrantAllPermissions()) {
                 grantPermission(rolename, session);
             }
@@ -149,9 +152,10 @@ public class MdsServiceManageResource {
                             alterSysteAuthRequest.getDataCenterVsReplicationFactor());
             String query = "ALTER KEYSPACE system_auth WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', " + dcRf
                             + "};";
+            Statement statement = new SimpleStatement(query).setConsistencyLevel(ConsistencyLevel.ALL);
             LOGGER.info("Alter system auth query:" + query);
 
-            session.execute(query);
+            session.execute(statement);
         } catch (NoHostAvailableException e) {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity(e.getMessage()).build();
         } catch (QueryExecutionException e) {
