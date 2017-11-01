@@ -186,6 +186,8 @@ server:
   connector:
     type: http
     port: ${API_PORT:-8080}
+    acceptorThreads: 2
+    selectorThreads: 3
 logging:
   level: ${LOG_LEVEL:-INFO}
   appenders:
