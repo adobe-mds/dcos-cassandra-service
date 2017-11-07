@@ -30,10 +30,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.datastax.driver.core.BoundStatement;
+import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
+import com.datastax.driver.core.SimpleStatement;
+import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.exceptions.NoHostAvailableException;
 import com.datastax.driver.core.exceptions.QueryExecutionException;
 import com.datastax.driver.core.exceptions.QueryValidationException;
@@ -291,4 +294,55 @@ public class MdsItestManageResource {
 		}
 		return inKeys;
 	}
+	
+    @PUT
+    @Path("/lucene")
+    public Response createLuceneIndex(CassandraAuth cassandraAuth) throws ConfigStoreException {
+    	//only used to create index on typestest table
+    	
+        try (Session session = MdsCassandraUtills.getSession(cassandraAuth, capabilities,
+                        state, configurationManager)) {
+            String query = "CREATE CUSTOM INDEX lucene_index ON stresscql.typestest () USING 'com.stratio.cassandra.lucene.Index' WITH OPTIONS = {'refresh_seconds': '1','schema': '{fields: { name: {type: \"string\"}, choice: {type: \"boolean\"} ,date: {type: \"date\", pattern: \"yyyy/MM/dd\"} }}'};";
+            Statement statement = new SimpleStatement(query).setConsistencyLevel(ConsistencyLevel.ALL);
+            LOGGER.info("Create Index query:" + query);
+
+            session.execute(statement);
+        } catch (NoHostAvailableException e) {
+            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity(e.getMessage()).build();
+        } catch (QueryExecutionException e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e.getMessage()).build();
+        } catch (QueryValidationException e) {
+            return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
+        } catch (Exception e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e.getMessage()).build();
+        }
+
+        return Response.status(Response.Status.OK).entity("Successfull").build();
+    }
+    
+    @POST
+    @Path("/lucenestatus")
+    public Response checkLuceneIndex(CassandraAuth cassandraAuth){
+    	LOGGER.info("Gettting stress data with LUCENE INDEX");
+
+		try (Session session = MdsCassandraUtills.getSession(cassandraAuth, capabilities, state,
+		        configurationManager)) {
+			PreparedStatement ps = session
+			        .prepare("select * from stresscql.typestest where expr(lucene_index,'{}');");
+			BoundStatement boundStatement = ps.bind();
+			LOGGER.info("stress query string = " + ps.getQueryString());
+			ResultSet rs = session.execute(boundStatement);
+		} catch (NoHostAvailableException e) {
+			throw new ServiceUnavailableException(e.getMessage());
+		} catch (QueryExecutionException e) {
+			throw new InternalServerErrorException(e.getMessage());
+		} catch (QueryValidationException e) {
+			throw new BadRequestException(e.getMessage());
+		} catch (Exception e) {
+			throw new InternalServerErrorException(e.getMessage());
+		}
+		LOGGER.info("Lucene Index is working");
+    
+		return Response.status(Response.Status.OK).entity("Successfull").build();
+    }
 }
