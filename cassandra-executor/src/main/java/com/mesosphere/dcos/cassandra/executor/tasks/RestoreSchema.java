@@ -7,6 +7,8 @@ import com.mesosphere.dcos.cassandra.common.tasks.backup.BackupRestoreContext;
 import com.mesosphere.dcos.cassandra.common.tasks.backup.RestoreSchemaTask;
 import com.mesosphere.dcos.cassandra.executor.CassandraDaemonProcess;
 import com.mesosphere.dcos.cassandra.executor.backup.BackupStorageDriver;
+
+import com.datastax.driver.core.exceptions.InvalidQueryException;
 import org.apache.mesos.ExecutorDriver;
 import org.apache.mesos.Protos;
 import org.apache.mesos.executor.ExecutorTask;
@@ -80,6 +82,8 @@ public class RestoreSchema implements ExecutorTask {
                     session.execute(cqlStmt);
                 } catch (AlreadyExistsException e) {
                     LOGGER.info("Schema already exists: {}", e.toString());
+                } catch (InvalidQueryException e){
+                	LOGGER.info("InvalidQueryException: Invalid Query may be trying to create the index again", e.toString());
                 }
             }
 
